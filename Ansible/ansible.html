@@ -1,0 +1,285 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<meta content="text/html; charset=UTF-8" http-equiv="content-type">
+  	<link rel="stylesheet" href="../jbl_labs.css"> 
+  	<title>
+		Lab: Intro To Ansible</title>
+<script type="text/javascript">
+ 	function unhide(divID) {
+ 		var item = document.getElementById(divID);
+ 		if (item) {
+ 			item.className=(item.className=='hidden')?'unhidden':'hidden';
+ 		}
+	}
+ </script>
+  
+</head>
+
+<body>
+<h1>Lab: Intro To Ansible </h1>
+<h2>Introduction</h2>
+<p class="description">Today we will explore a leading tool for automated systems configuration management. We will use Ansible to configure systems as web servers.</p>
+<p class="description">
+A useful short introduction can be found in this <a href="https://youtu.be/MfoAb50Br94" target="blank">Ansible Video</a>, the first 9 and half minutes are the most valuable. 
+</p>
+
+<img src="./ansible.png" alt="Lab Diagram">
+
+<hr>
+
+<h2>Part A: Install Ansible on cn01</h2>
+<p class="description">
+Ansible is part of the standard RHEL repos but it is not included on the ISO that we used to build our repos on Yoda.
+</p>
+<ol>
+<li>Add the Ansible packages, and dependencies, to Yoda. 
+<ol type="a">
+<li>Expand the supplied tar ball on Yoda
+<pre class="code">
+cd /var/www/html
+tar xf /tmp/ansible_repo.tar
+</pre>
+</li>
+<li>Create the matching .repo file on web01
+<pre class="code">
+cat &gt; /etc/yum.repos.d/yodaAnsible.repo &lt;&lt;EOF
+[yodaAnsible]
+metadata_expire=-1
+name=yodaAnsible
+baseurl=http://yoda/ansible
+enabled=1
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+</pre>
+</li>
+</ol>
+</li>
+
+</ol>
+
+<hr>
+<h2>Part B: Set up ssh</h2>
+<p class="description">
+Ansible uses ssh to communicate between the control node and the managed nodes.  We learned how to do this in our ssh lab.
+</p>
+<ol>
+<li>Create a key pair for root on cn01 </li>
+<li>Distribute the public key to /root/.ssh/authorized_keys on web01 and web02
+</li>
+</ol>
+
+<hr>
+<h2>Part C: Tell Ansible where to find our managed nodes</h2>
+<p class="description">
+<strong>Note:</strong> all Ansible configuration and commands will be run on cn01
+</p>
+<ol>
+<li>Declare our <strong>inventory</strong> by making <span class=cmd>/etc/ansible/hosts</span> look like this:
+<pre class="code">
+[web]
+web01
+web02
+</pre>
+</li>
+<li>Test our work
+<pre class="code">
+ansible -m ping all
+</pre>
+should return something like...
+<pre class="code">
+web01 | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python"
+    }, 
+    "changed": false, 
+    "ping": "pong"
+}
+web02 | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python"
+    }, 
+    "changed": false, 
+    "ping": "pong"
+}
+</pre>
+</li>
+</ol>
+
+<hr>
+<h2>Part D: Write a Playbook</h2>
+<p class="description">
+Ansible uses <strong>playbooks</strong> to group commands.  Playbooks are YML files.  YML is picky about spacing and indentation.  Even more picky thank Python. We can setup vim or nano defaults to help us.  <strong>Note:</strong>For the .vimrc setting to apply, you must invoke vim not vi.
+</p>
+
+<ol>
+<li>Make vim YML friendly by using spaces instead of tabs.  Make your <span class=cmd>~/.vimrc</span> file look like this:
+<pre class="code">
+set expandtab
+set tabstop=4
+</pre>
+or if you must... Make your <span class=cmd>~/.nanorc</span> file look like this:
+<pre class="code">
+set tabsize 4
+set tabstospaces
+</pre>
+</li>
+<li>Create a simple playbook to install httpd on all web servers. Call your playbook, <span class=cmd>~/ansible/web_config.yml</span>
+<pre class="code">
+---
+- name: configure web server
+  hosts: web
+  remote_user: root
+
+  tasks:
+   - name: Install the latest version of Apache
+     ansible.builtin.dnf:
+       name: httpd
+       state: latest
+</pre>
+</li>
+<li>Run our first playbook
+<pre class="code">
+ansible-playbook  web_config.yml
+</pre>
+</li>
+<li>Demonstrate that our playbook is idempotent by running it again
+<pre class="code">
+ansible-playbook  web_config.yml
+</pre>
+</li>
+</ol>
+
+<hr>
+<h2>Part E: Expand our playbook to include filewall settings: </h2>
+<ol>
+<li>Here's the tasks to add..
+<pre class="code">
+   - name: permit traffic in default zone for https service
+     ansible.posix.firewalld:
+       service: http
+       permanent: yes
+       state: enabled
+</pre>
+</li>
+<li>Run our playbook..
+<pre class="code">
+ansible-playbook  web_config.yml
+</pre>
+</li>
+<li>
+			<a href="javascript:unhide('hs1')">How did that go?</a>
+				<span id="hs1" class="hidden">
+				<em><br>Not so well.  Our friends at RH don't include many Ansible modules in 'core'.</em>
+				</span>
+</li>
+<li>Download and add the Ansible posix module:
+<ol type="a">
+<li>Fetch the code as a tar ball from <a href="http://galaxy.ansible.com/ansible/posix">https://galaxy.ansible.com</a>
+<ul>
+<li>Select <strong>Download tarball</strong> </li>
+</ul>
+<li>Copy the tarball to root's home directory on ns01 </li>
+<li>Write a configuration playbook to install the posix module on ns01
+<pre class="code">
+cat &gt; ~/ansible/posix_requirements.yml &lt;&lt;EOF
+---
+
+collections:
+    - name: ../ansible-posix-1.4.0.tar.gz
+      type: file
+EOF
+</pre>
+Note: Your tar ball may have a newer version number than this example.
+</li>
+<li>Run our configuration playbook
+<pre class="code">
+ansible-galaxy install -r posix_requirements.yml
+</pre>
+</li>
+</ol>
+</li>
+
+<li>Try running our firewall playbook again
+<pre class="code">
+ansible-playbook  web_config.yml
+</pre>
+</li>
+<li>Check our work... (http should be open)
+<pre class="code">
+ssh web01 firewall-cmd --list-all
+</pre>
+</li>
+</ol>
+
+<hr>
+<h2>Part F: Check our work - access the web server</h2>
+<ul>
+<li>From ns01, use curl
+<pre class="code">
+curl http://web01/
+</pre>
+</li>
+			<a href="javascript:unhide('hs2')">How did that go? </a>
+				<span id="hs2" class="hidden">
+				<em><br>Not so well.  We installed httpd, but did not enable/start it</em>
+				</span>
+</ul>
+<hr>
+<h2>Part G: Fix our work</h2>
+<ul>
+<li>Update <strong>web_config.yml</strong>
+<pre class="code">
+   - name: Enable service httpd and ensure it is not masked
+     ansible.builtin.systemd:
+       name: httpd
+       enabled: yes
+       masked: no
+
+   - name: start service httpd 
+     ansible.builtin.systemd:
+       name: httpd
+       state: started
+</pre>
+</li>
+<li>Run our new playbook
+<pre class="code">
+nsible-playbook  web_config.yml
+</pre>
+</li>
+<li>Check again..
+<pre class="code">
+curl http://web01/
+</pre>
+</li>
+</ul>
+<hr>
+<h2>Part H: Our Second Playbook</h2>
+<p class="description">
+Create a second play book named <span class=cmd>home_page.yml</span> containing the task(s) required to get publish a simple homepage on our web servers.
+</p>
+<ol>
+<li>Create a simple home page of your own design.  </li>
+<li>Use the Ansible built in module <strong>copy</strong> to publish your home page on web01 and web02 (<a href="https://docs.ansible.com/ansible/latest/collections/ansible/builtin/copy_module.html#ansible-collections-ansible-builtin-copy-module">copy module docs)</a> </li>
+</ol>
+
+<hr>
+<h2>Grading</h2>
+<p class="description">
+Submit your <span class=cmd>web_config.yml</span> and <span class=cmd>home_page.yml</span> to Canvas.
+</p>
+
+<hr>
+<h2>Reference:</h2>
+
+<ul>
+<li><a href="https://docs.ansible.com/ansible/latest/user_guide/playbooks_intro.html">Playbook Intro From Ansible</a></li>
+<li><a href="https://docs.ansible.com/ansible/latest/user_guide/playbooks_best_practices.html">Playbook Tips from Ansible</a></li>
+<li><a href="https://docs.ansible.com/ansible/latest/collections/ansible/builtin/systemd_module.html">Systemd Ansible docs</a> </li>
+<li><a href="https://docs.ansible.com/ansible/latest/collections/ansible/builtin/dnf_module.html">DNF Ansible docs</a> </li>
+</li>
+<li><a href="https://docs.ansible.com/ansible/latest/reference_appendices/YAMLSyntax.html">YAML Guide</a></li>
+</ul>
+
+</body>
+</html>

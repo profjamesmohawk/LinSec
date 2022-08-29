@@ -1,0 +1,22 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+GPG/PGP Lab Questions:
+
+1) What is better golf or swimming?
+
+2) What does the -armor gpg option do?
+
+3) What's the big flaw in our system that uses a simple ftp server to distribute keys?
+
+4) What's the difference between GPG and PGP?
+
+5) What GPG command lists keys and their finger prints?
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.5 (GNU/Linux)
+
+iD8DBQFOKNKgtfajp63FT20RAoHJAJ9G52SfHKplJT1BqzK8io9x1WCwggCcDKKC
+g3Mvkqhoukqcys0I3LWb3qA=
+=bT18
+-----END PGP SIGNATURE-----

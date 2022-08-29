@@ -1,0 +1,461 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<meta content="text/html; charset=ISO-8859-1" http-equiv="content-type">
+  	<link rel="stylesheet" href="../jbl_labs.css"> 
+  	<title>
+		Lab 01 - Automated Installation and Configuration
+	</title>
+  
+</head>
+
+<body>
+<h1>Lab 01: Automated Installation and Configuration</h1>
+
+<h2>Introduction</h2>
+<p class="description">
+We will build the infrastructure required to perform automated network based installation and initial configuration of RHEL nodes.  The techniques and technologies we will practice don't just apply to RHEL.  Every major UNIX O/S has an automated installation and configuration process.  Most use the same tools, all use the same concepts.
+</p>
+<p class="description">
+Relax and take a deep breath, it's time to dive back into Linux.  This lab will require you to call upon the Linux administration skills you already know and to build a few new ones.
+</p>
+
+<hr>
+<h2>Prerequisites:</h2>
+<h3>Before you start this lab you must have:</h3>
+	<ul>
+		<li>RHEL 8.3 installation DVD</li>
+		<li>The course VirtualBox appliance containing <strong>w01</strong> and <strong>yoda</strong> </li>
+		<li><strong>Patience: This lab is scheduled to take two weeks.</strong></li>
+	</ul>
+
+<h3>Before you start this lab you should be familiar with:</h3>
+	<ul>
+		<li>DHCP</li>
+		<li>TFTP</li>
+		<li>Linux commands: cp, mv, tar, ...</li>
+		<li>Linux administration: services/daemons, boot process, file systems</li>
+		<li>Very basic Apache httpd administration.</li>
+		<li>x86/x64 system boot, including PXE boot</li>
+		<li>Software installation with YUM</li>
+	</ul>
+<h2>Reference Materials:</h2>
+<ul>
+<li><a href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/performing_an_advanced_rhel_installation/kickstart-commands-and-options-reference_installing-rhel-as-an-experienced-user">Kickstart Commands (from RH)</a>
+<li><a href="https://pykickstart.readthedocs.io/en/latest/kickstart-docs.html">Kickstart File Documentation</a> </li>
+</li>
+</ul> <hr>
+<h2>Grading:</h2>
+<br>
+<p class="description">
+Complete the quiz "Automated Build" on Canvas.
+</p>
+
+<hr>
+<h2>Overview:</h2>
+<p class="description"> You will build this configuration.  </p>
+<p> <IMG src="./yoda.png" alt="VM diagram"> </p>
+
+<hr>
+<h2>Part A: Redeploy y01 as yoda</h2>
+<p class="description">
+Alice, our friend from the Admin course, has been promoted and now manages the update server.  Alice's first decree as all powerful root was to rename y01 to yoda.   
+</p>
+<ol>
+<li>Import the course VirtualBox appliance.  </li>
+<li>Boot <strong>yoda</strong> and <strong>w01</strong> </li>
+<li>Log on to each and have a look around
+<ul>
+<li>alice/userpass </li>
+<li>root/adminpass </li>
+</ul>
+</li>
+<li>Verify that <strong>w01</strong> can access <a href="https://mycanvas.mohawkcollege.ca/">Canvas</a>
+</li>
+</ol>
+
+<hr>
+<h2>Part B: Configure the new disk on yoda</h2>
+<p class="description">
+Yoda servers as a YUM/DNF server.  For our admin course we only needed a few packages.  Now we need more. We will format the disk Alice added and mount it at <strong>/var/www</strong> to make space for all those new packages.  Alice has added a disk, it shows as /dev/sdb
+</p>
+<ol>
+<li>Partition /dev/sdb with one primary  partition. </li>
+<li>Build an ext4 file system on /dev/sdb1 </li>
+<li>Mount our new file system at /mnt <em>(do not add to fstab yet)</em>.  </li>
+<li>Copy the contents of the <em>old</em> /var/www/ to the <em>new</em> file system.  
+<pre class="code">
+cp -a /var/www/* /mnt
+</pre>
+</li>
+<li>Remove the <em>old</em> files to free up space.  
+<pre class="code">
+rm -rf /var/www/*
+</pre>
+</li>
+<li>Add our new file system to fstab.  The entry will look like this (but with a different UUID)
+<pre class="code">
+UUID=2d8e7f1f-9832-4357-8d00-7a6429783f48    /var/www   ext4   defaults  0  1</pre>
+</li>
+<li>Check or fstab entry
+<pre class="code">
+mount -a
+df
+</pre>
+</li>
+<li>Check w01 can still see the mini83 and miniPatch repos.:
+<pre class="code">
+#Run on w01 as root
+yum clean all
+yum repolist
+</pre>
+</li>
+<strong>Note:</strong> A review of the "File Systems and Disks" lab from Admin might be helpful.
+</ol>
+<hr>
+<h2> Part C: Copy RPMs from DVD to /var/www/html </h2>
+<p class="description">
+The RHEL DVD contains two repos: BaseOS and AppStream.  We will copy these repos to /var/www/html so that they can be served to clients via http. <em>More accurately we will copy the entire install ISO</em>
+</p>
+<ol>
+<li>Put the ISO in yoda's drive using the VirtualBox GUI </li>
+<li>Mount the ISO
+<pre class="code">
+mount /RHEL-8-3-0-BaseOS-x86_64
+</pre>
+</li>
+<li>Make a directory to hold the contents of the DVD
+<pre class="code">
+mkdir /var/www/html/83
+</pre>
+</li>
+<li>Copy the <strong>BaseOS</strong> repository tree from the DVD to /var/www/html
+<pre class="code">
+cp -a /RHEL-8-3-0-BaseOS-x86_64/* /var/www/html/83
+</pre>
+</li>
+</ol>
+
+<hr>
+<h2>Part D: Make yoda a DHCP server</h2>
+<p class="description">
+To install Linux over the network we need a DHCP server that we control.  Fortunately a lovely DHCP server is included with most Linux distributions including RHEL.
+</p>
+
+<ol>
+<li>Verify that the DVD is mounted
+<pre class="code">
+df /RHEL-8-3-0-BaseOS-x86_64/
+</pre>
+</li>
+<li>Install the DHCP server software
+<pre class="code">
+yum install dhcpd-server
+</pre>
+</li>
+<li>Set the DHCP server to start on boot
+<pre class="code">
+systemctl enable dhcpd
+</pre>
+</li>
+<li>Start the DHCP server
+<pre class="code">
+systemctl enable dhcpd
+</pre>
+</li>
+<li>How did that go?
+<ul>
+<li>You should have seen an error like this, when you tried to start dhcpd
+<pre class="code">
+Job for dhcpd.service failed because the control process exited with error code.
+See "systemctl status dhcpd.service" and "journalctl -xe" for details.
+</pre>
+</li>
+<li>No need to panic.  We just need to modify the dhcpd configuration file to match our environment.  </li>
+</ul>
+</li>
+</ol>
+
+<hr>
+<h2>Part E: Configure our DHCP Server</h2>
+<p class="description">
+The dhcp server needs to be told what sub-nets to manage or it won't start.  While we are editing the dhcpd.conf file, we will also add the bits we need to support PXE-boot.
+</p>
+<ol>
+<li>Edit <strong>/etc/dhcp/dhcpd.conf </strong> so that it looks like this...
+<pre class="code">
+#
+# DHCP Server Configuration file.
+#   see /usr/share/doc/dhcp-server/dhcpd.conf.example
+#   see dhcpd.conf(5) man page
+#
+option space pxelinux;
+option pxelinux.magic code 208 = string;
+option pxelinux.configfile code 209 = text;
+option pxelinux.pathprefix code 210 = text;
+option pxelinux.reboottime code 211 = unsigned integer 32;
+option architecture-type code 93 = unsigned integer 16;
+
+subnet 10.1.1.0 netmask 255.255.255.0 {
+	option routers 10.1.1.1;
+	range 10.1.1.150 10.1.1.200;
+
+	allow bootp;
+	allow booting;
+
+	# tell PXE client where to look for next file
+	next-server 10.1.1.100;
+
+	# tell PCS client what file to load next
+	filename "pxelinux.0";
+}
+</pre>
+</li>
+<li>Allow DHCP through the firewall
+<pre class="code">
+firewall-cmd --permanent --add-service=dhcp
+firewall-cmd --reload
+</pre>
+</li>
+</ol>
+
+
+<hr>
+<h2>Part F: Install and configure tftp</h2>
+<p class="description">
+Network based installation uses the Trivial FTP service (tftp) to download boot code.
+<br>TFTP is a very simple file transfer protocol that uses UDP on port 69 to serve files.  By convention TFTP serves files from the /tftpboot directory.
+<ol>
+<li>Install the tftp server using YUM: <pre class="code">yum install tftp-server</pre></li>
+<li>Install the tft client using YUM: <pre class="code">yum install tftp</pre></li>
+<li>Set the tftp service to start automatically: <pre class="code">systemctl enable tftp.socket</pre></li>
+<li>Manually start the tftp service: <pre class="code">systemctl start tftp.socket </pre> </li>
+<li>Allow tftp through the firewall
+<pre class="code">
+firewall-cmd --permanent --add-service=tftp
+firewall-cmd --reload
+</pre>
+</li>
+<li>Check your work: </li>
+<pre class="code">
+echo "hi" &gt; /var/lib/tftpboot/f1
+cd /tmp
+tftp localhost
+get f1
+quit
+cat f1
+</pre>
+</ol>
+</p>
+
+<hr>
+<h2>Part G: Configure the boot files</h2>
+<p class="description">
+Put the files our client needs to boot in the correct places.
+</p>
+<ol>
+<li>Use the <span class=cmd>rpm2cpio</span> utility to pull the files we need directly from the RPM
+<pre class="code">
+cd /var/lib/
+rpm2cpio /RHEL-8-3-0-BaseOS-x86_64/BaseOS/Packages/syslinux-tftpboot-6.04-4.el8.noarch.rpm | cpio -imudv 
+</pre>
+</li>
+<li>Make the directory where the pxe-client will look for it's configuration
+<pre class="code">
+mkdir /var/lib/tftpboot/pxelinux.cfg
+</pre>
+</li>
+<li>Create a default configuration file <strong>/var/lib/tftpboot/pxelinux.cfg/default</strong> that looks like this:</li>
+<pre class="code">
+default vesamenu.c32
+prompt 1
+timeout 5
+
+display boot.msg
+
+label linux
+  menu label Install system
+  menu default
+  kernel images/RHEL-8.1/vmlinuz
+  append initrd=images/RHEL-8.1/initrd.img ip=dhcp inst.repo=http://10.1.1.100/83 ks=http://10.1.1.100/Kickstart/default.ks inst.kdump_addon=off
+label rescue
+  menu label Rescue installed system
+  kernel images/RHEL-8.1/vmlinuz
+  append initrd=images/RHEL-8.1/initrd.img rescue
+label local
+  menu label Boot from local drive
+  localboot 0xffff
+</pre>
+
+
+<li>Put a copy of the install kernel and matching disk image where the client cat get it via tftp</li>
+<pre class="code">
+mkdir -p /var/lib/tftpboot/images/RHEL-8.1/
+cp /RHEL-8-3-0-BaseOS-x86_64/images/pxeboot/initrd.img /var/lib/tftpboot/pxelinux/images/RHEL-8.1/
+cp /RHEL-8-3-0-BaseOS-x86_64/images/pxeboot/vmlinuz /var/lib/tftpboot/pxelinux/images/RHEL-8.1/
+</ol>
+
+<hr>
+<h2>Part H: Configure Kickstart</h2>
+<p class="description">
+With the infrastructure we have build so far we could perform network based installations, but we would still have to answer the set-up questions.  This is <strong>bad</strong>, not only is it time consuming but it is prone to errors and inconsistencies.  Kickstart to the rescue.  Kickstart is RHEL way of supplying answers to the installer's questions from a file. 
+<br>We will build a simple Kickstart file and publish it via httpd.
+
+<ol>
+<li>Create a home for our Kickstart file(s)
+<pre class="code">mkdir /var/www/html/Kickstart </pre>
+</li>
+<li>Create a default Kickstart file, /var/www/html/Kickstart/default.ks that looks like this:</li>
+<pre class="code">
+#
+# Sample Kickstart file for COMP-10032
+#
+# james, summer 2022
+#
+
+#version=RHEL8
+
+# install from the command line with no interaction
+cmdline
+
+# agree to RHEL end user legal agreement :( 
+eula --agreed
+
+# install from yoda repo
+url --url=http://10.1.1.100/83/BaseOS
+
+# include the AppStream repo from yoda too
+repo --name="AppStream" --baseurl=http://10.1.1.100/83/AppStream
+repo --name="miniPatch" --baseurl=http://10.1.1.100/miniPatch
+
+# log to syslog on yoda
+#logging --host=10.1.1.100 --level=debug --port=514
+
+%packages
+@minimal-environment
+nano 
+bc 
+bash-completion
+%end
+
+# Keyboard layouts
+keyboard --xlayouts='us'
+
+# System language
+lang en_CA.UTF-8
+
+# Network information
+network  --bootproto dhcp
+
+# storage configuration
+#
+
+# use only sda
+ignoredisk --only-use=sda
+
+# remove any existing partitions
+clearpart --all --drives=sda
+
+# a classic partition for /boot
+part /boot --size=500 --fstype=ext4
+
+# Use the rest of the disk for LVM, leaving some free PE
+part pv.01 --size=1 --grow
+volgroup VG01 pv.01
+logvol swap --recommended --vgname=VG01  --name=LV_swap
+logvol / --vgname=VG01 --size=1000  --fstype=ext4 --name=LV_root
+logvol /usr --vgname=VG01 --size=2500  --fstype=ext4 --name=LV_usr
+logvol /tmp --vgname=VG01 --size=200  --fstype=ext4 --name=LV_tmp
+logvol /var --vgname=VG01 --size=500 --fstype=ext4 --name=LV_var
+logvol /home --vgname=VG01 --size=200  --fstype=ext4 --name=LV_home
+
+
+# System timezone
+timezone America/New_York --isUtc
+
+# Root password (adminpass)
+rootpw --iscrypted $6$iUoPTAnSZ6Rv4RHQ$lmzXSayAdj4VeWvkGt6VYJ0nLacw.rOQWpmJ2dE1iOn6XjS/kcGtW8qeG6RHMJtNgdVbi00CqpOPb3g8lCZYd.
+
+reboot
+
+# Set the passwd policy.
+# This is a feature of the AnacondaUI, so it must be enclosed with an %anaconda ... %end block
+#
+%anaconda
+pwpolicy root --minlen=6 --minquality=1 --notstrict --nochanges --notempty
+pwpolicy user --minlen=6 --minquality=1 --notstrict --nochanges --emptyok
+pwpolicy luks --minlen=6 --minquality=1 --notstrict --nochanges --notempty
+%end
+
+# Lines in the %post block will be executed by the shell after installation
+#
+%post
+
+# we will manage our own repos thank-you
+subscription-manager config --rhsm.manage_repos=0
+
+# configure bash the way james likes it ;)
+cat &gt;/root/.bashrc &lt;&lt;EOF
+if [ -f /etc/bashrc ]; then
+	. /etc/bashrc
+fi
+set -o vi
+alias lt='ls -lrt'
+alias hg='history | grep'
+EOF
+
+%end
+</pre>
+</ol>
+
+</p>
+
+<hr>
+<h2>Part I: Perform an automated install</h2>
+<p class="description">
+All the ground work is done - it's time to build a server.  <strong>"Look Ma' no hands!"</strong>
+</p>
+<ol>
+<li>Create a VM with:</li>
+<ul>
+	<li>min 2048 MB RAM</li>
+	<li>8 GB hard drive, Dynamically Expanding</li>
+	<li>Network Adapter 1: blue Network </li>
+</ul>
+<li>Boot the VM</li>
+<ul>
+<li>Interrupt the boot process by hitting <strong>F12</strong> as soon as you see the VirtualBox BIOS splash screen
+</li>
+<li>Press <strong>l</strong> for <em>Boot from LAN</em>
+</li>
+</ul>
+</ol>
+
+<hr>
+<h2>Part J: Customize our install</h2>
+<p class="description">
+Now we get to see how easy it is to modify our installation settings, and build some more servers.
+</p>
+<p class="description">
+You may want to review the Kickstart documentation found in <em>Notes and Reference Material</em>
+</p>
+<h3>Required activity</h3>
+<ol>
+<li>Change the Kickstart file such that the default root password is one of your choosing</li>
+<li>Build a new server to test your work</li>
+</ol>
+
+<h3>Optional activity (Advanced study)</h3>
+<ol>
+<li>Modify the remote installation infrastructure such that a new server can be assigned a specific Kickstart file based on it's Ethernet address.  <br>Note: Before <strong>pxelinux.cfg/default </strong> is loaded, pxelinux looks for a file like <strong>pxelinux.cfg/01-08-00-27-c5-e0-f3</strong> where <strong>01-08-00-27-c5-e0-f3</strong> is the Ethernet address of the client.</li>
+<li>Since we will be using this build server all term, now would be a good time to add other customizations like a custom bash profile so you won't have to tweek every server you install.</li>
+<li>Build two new servers each from a different Kickstart file.</li>
+</ol>
+
+<hr>
+<h2>Part K: Making yoda Portable</h2>
+<p class="description">
+We will need yoda for all of our labs and test.  If you built yoda on a classroom computer, you will need to make sure that you copy the contents of the VirtualBox VM folder to you your external drive.  The folder you want is <strong>VirtualBox VMs/yoda(10.1.1.100)</strong>.  Double clicking on the <strong>yoda(10.1.1.100).vbox</strong> file contained in this folder should register the yoda VM with VirtualBox on any new host.
+</p>
+</body>
+</html>

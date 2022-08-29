@@ -1,0 +1,163 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<meta content="text/html; charset=ISO-8859-1" http-equiv="content-type">
+  	<link rel="stylesheet" href="./jbl_labs.css"> 
+  	<title>
+		COMP-10032 UNIX Security Course Content
+	</title>
+  
+</head>
+
+<body>
+<h1>COMP-10032 Linux Security</h1>
+
+<h2>Reference Material</h2>
+<p class="description">
+These resources will help you with every lab.
+</p>
+<ul>
+<li><a href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8">Red Hat Enterprise Linux 8 Product Documentation</a>
+</li>
+<li>Man Pages are your friend too !!!</li>
+</ul>
+
+<hr>
+
+<h2>Module 1: Installing a clean, safe system - EVERY TIME </h2>
+<p class="description">
+A chain is only a strong as it's weakest link and network is only as strong as it's weakest system.  It is essential that every system you roll-out be configured correctly and completely.  The best way to ensure this is to automate the installation and configuration process.  In this module we will build the infrastructure required to perform automated installation and configuration of RedHat systems.
+</p>
+<ul>
+	<li><a  href="./AutomatedBuild/AutomatedBuild.html">Lab 01: Automated Build</a> </li>
+</ul>
+<em>Note: This is a two week Lab</em>
+
+<hr>
+<h2>Module 2: Customizing our install</h2>
+<p class="description">
+We now have a working build server.  Today we will customize our Kickstart file so that our newly built systems can fit smoothly into our production environment.
+</p>
+<ul>
+	<li><a href="./AutomatedBuildCustomization/AutomatedBuildCustomization.html">Lab 02:Autonated Build - Customization</a></li>
+</ul>
+
+<hr>
+<h2>Hands-On Test 1</h2>
+<ul> 
+<li><a href="./tests/test_01/HandsOn_01.html">Test 1</a> </li>
+</li>
+</ul>
+
+
+<hr>
+<h2>Module 3: Secure Remote Access</h2>
+<p class="description">
+The secure shell (ssh) that you know and love is the standard tool for safely accessing remote nodes.  In this module we will learn how to use ssh 'like the pros do', including how to use ssh as a makeshift VPN (Virtual Private Network).
+</p>
+<ul>
+	<li><a href="./SecureRemoteAccess/SecureRemoteAccess.html">Lab 03: Secure Remote Access</a></li>
+</ul>
+<hr>
+<h2>Module 3a: SELINUX</h2>
+<p class=description>
+The Security Enhanced Linux framework is a valuable tool for securing servers. It's primary function, as deployed by RedHat/CentOS is to limit the access of server processes, like httpd, to minimize exposure should the service be compromised.  Many admins simply disable SELINUX out of fear and ignorance.
+</p>
+<ul>
+  <li><a href="./03a_notes.html">Notes and Reference Material</a> </li>
+  <li><a href="./03a_lab.html">Lab 03a</a> </li>
+</ul>
+
+
+<hr>
+<h2>Module 4: Security Scanners and Intrusion Detection Systems</h2>
+<p class="description">
+In most organizations no node can be placed on the production network until it has passed a security scan.  Security scans look for know vulnerability and configuration mistakes.  In this module we will subject our systems to one of the worlds most popular security scanners and we will build our own scanner.
+</p>
+<p class="description">
+Intrusion detection systems (IDS) are the watchdogs of computer security.  They monitor systems and alert administrators to activities and changes that might indicated nefarious actions.  We will build our own IDS from scratch.
+</p>
+<ul>
+	<li><a href="./Scanners/Scanners.html">Lab 04: Scanners</a></li>
+	<li><a href="./Scanners/Scanners_notes.html">Notes and Reference Material</a></li>
+</ul>
+
+
+<hr>
+<h2>Module 5: Public Key Cryptography</h2>
+<p class="description">
+How do you know who to trust on the 'net?  In almost every scenario where we trust a principal on the Internet, we use public key cryptography in one form or an other to do so.  SSL certificates are based on public key cryptography, so are digital signatures.  In this module we'll learn how to use GPG/PGP (GNU Privacy Guard/Pretty Good Privacy) to sign documents, verify signatures and encrypt documents.
+</p>
+<ul>
+	<li><a href="./GPG/GPG.html">Lab 05</a></li>
+	<li><a href="./GPG/notes.html">Notes and Reference Material</a></li>
+</ul>
+
+
+<hr>
+<h2>Hands-On Test 2</h2>
+<ul> 
+<li>coming soon</li>
+</ul>
+
+<hr>
+<h2>Module 6: Network Security</h2>
+<p class="description">
+The 'net allows administrators and users to access systems from anywhere in the world, it also allows crackers to attack from anywhere. If your system is attacked, chances are the attack came over an IP network. In this module we'll learn how to protect our systems with: local firewalls; tcp wrappers; and segmented networks.
+</p>
+<ul>
+	<li><a href="./NetworkIsolation/nftables.pdf">Lecture Slides: nftables</a> </li>
+	<li><a href="./NetworkIsolation/NetworkIsolation_notes.html">Notes and Reference Material</a></li>
+	<li><a href="./NetworkIsolation/NetworkIsolation.html">Lab: Network Isolation</a></li>
+</ul>
+
+
+<hr>
+<h2>Module 7: Ansible</h2>
+<p class="description">
+Back in 1995, it was typical for an admin to manage fewer than 5 servers.  This is no longer the case. With tens or hundreds of O/S instances to manage, we need some help.
+System management tools like Ansible provide just that.
+</p>
+
+<ul>
+	<li><a href="./Ansible/ansible.html">Lab: Ansible Lab</a></li>
+</ul>
+
+<hr>
+<h2>Module 8: Git</h2>
+<p class="description">
+For decades version control software has been the backbone of the software development and release processes.  Git is the current reigning champ of version control software on Linux.  
+</p>
+<ul>
+<li><a href="./Git/Git.html">Lab: Git</a>
+</li>
+</ul>
+
+
+<hr>
+<h2>Hands-On Test 3</h2>
+<ul> 
+<li>Coming Soon </li>
+</ul>
+
+<hr>
+<h2>Bistro '32</h2>
+<p class="description">
+Our end of term Bonus Banquet has been booked at the lovely Bistro '32.  Select projects from the menu and earn up to 5 bonus marks.
+<br>
+Demonstrate your work to earn your bonus marks.
+</p>
+<ul>
+<li>Coming soon
+</li>
+</ul>
+
+<hr>
+<h2>Hands-On Test 4</h2>
+<ul>
+<li>Coming soon
+</li>
+</ul>
+
+</body>
+</html>

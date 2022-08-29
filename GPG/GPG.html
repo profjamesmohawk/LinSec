@@ -1,0 +1,159 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<meta content="text/html; charset=ISO-8859-1" http-equiv="content-type">
+  	<link rel="stylesheet" href="../jbl_labs.css"> 
+  	<title>
+		 GPG
+	</title>
+
+	<style type="text/css">
+	li {line-height: 100%;}
+	</style>
+</head>
+
+<body>
+<h1> GPG (GNU Privacy Guard)</h1>
+<h2>Introduction</h2>
+<p class="description">
+</p>
+Today we will use the open (GNU) implementation of the PGP public key cryptography system.
+<hr>
+<h2>Grading:</h2>
+<p class="description">
+You will demonstrate your understanding of this lab by completing the questions found on Canvas and submitting a pdf or html document to the drop-box for this lab. Be careful, there are two sets of questions on Canvas, only one is genuine (the other is a forgery).
+</p>
+
+<hr>
+<h2>Overview:</h2>
+<p class="description"> You will build this configuration.  </p>
+<p> <IMG src="./GPG.png" alt=""> </p>
+
+<hr>
+<h2>Part A: Build vader</h2>
+<p class="description">
+Here's an other chance to show how much easier our lives are because we have a build server.
+</p>
+<p class="description">
+Build vader to these specifications:
+</p>
+<ul>
+<li>Standard OS configuration as defined in Lab01</li>
+<li>IP addressed shown in diagram above</li>
+<li>hostname set </li>
+<li>one regular user with userid=&lt;YOUR_NAME&gt; </li>
+<li>passwords for everyone</li>
+</ul>
+
+
+<hr>
+<h2>Part B: Creating and managing keys</h2>
+<p class="description">
+Before we can: sign, verify signatures, encrypt, or decrypt, you need to have keys. Public and private for yourself and a copies of other peoples private key.
+</p>
+<ol>
+<h3>Create a key pair for yourself:</h3>
+<li>Make sure you are logged on as YOU and not root</li>
+<pre class="code">
+whoami
+</pre>
+<li>Generate a key-pair for yourself</li>
+<pre class="code">
+gpg --gen-key
+
+  Select:
+	Name: &lt;your name&gt;
+	E-mail: &lt;your email address&gt;
+</pre>
+<strong>Note:</strong>This command might take a while to run, while running it looks at system activity to find 'randomness', a good way to generate system activity is to use find to run md5sum on every file. 
+
+
+<li>Check that your key-pair was generated and registered with GPG</li>
+<pre class="code">
+gpg --list-keys
+</pre>
+<h3>Import your manager's public key</h3>
+<li>Fetch the public key of <a href="./files/keys/bullwinkle.pub.txt">Bullwinkle J Moose, IT Director, Acme Corp</a></li>
+<li>Import Bullwinkle's public key</li>
+<pre class="code">
+gpg --import &lt; bullwinkle.pub.txt
+</pre>
+<h3>Export and publish your public key</h3>
+<li>Export your key</li>
+<pre class="code">
+gpg --export --armor &lt;your_name&gt; &gt; your_name.pub.txt
+</pre>
+<li>Use ftp to publish your public key to the ftp server supplied by your instructor</li>
+<h3>Import your neighbour's public key:</h3>
+<li>Use ftp to fetch and install your neighbour's public key from the ftp server
+<em>If you are doing this lab by yourself, play the role of your neighbour by logging on as another user and performing the necessary tasks.</em></li>
+</ol>
+
+<hr>
+<h2>Part C: Using Keys</h2>
+<p class="description">
+The keys you have created can be used for signing and encryption. In this section of the lab you will exchange two types of messages with your neighbour: signed and encrypted.
+</p>
+
+<ol>
+<h3>Create and publish your manifesto</h3>
+<li>Create a public document that you want the world to see and you want the world to know came from your. Call it first.last.manifesto.txt (It should contain one or two statements about which your feel strongly)</li>
+<li>Sign your manifesto with your public key, and place the signature in a file called first.last.manifesto.signed
+<em>hint: gpg --output &lt;outfile&gt; --clearsign &lt;file_to_sign&gt;</em></li>
+<li>Publish your signed manifesto to the ftp server</li>
+<li>Fetch your neighbour's signed manifesto from the ftp server</li>
+<li>Verify the signature 
+<em>hint: man gpg</em></li>
+<li>"Modify" your neighbour's manifesto, making a very small change (add a period or change a lower case letter to upper) Is the document still valid?</li>
+
+<h3>Comment on your neighbour's manifestor</h3>
+
+<li>Create a comment on your neighbour's manifesto in a file called comment.txt</li>
+<li>This comment is private and only to be read by your neighour - encrypt it with her public key, storing the result in a file called comment.for.first.last <em>hint: gpg --armor --output &lt;out_file&gt; -r &lt;email_address&gt; --encrypt <in_file></em></li>
+<li>Publish your comment to the ftp server </li>
+<li>Fetch any comments for you from the ftp server and decrypt them </li>
+<li>Fetch comments intended for someone else, see if you can read them</li>
+</ol>
+
+<hr>
+<h2>Part D: Demonstrating your proficiency (grading)</h2>
+<p class="description">
+To demonstrate your proficiency with GPG, you will: download questions from Canvas; verify their authenticity; answer the authentic questions; encrypt and sign your answers; and finally upload your answers to Canvas.
+</p>
+<ul>
+<li>Download <a href="./files/messages/Questions_A.txt">Questions_A</a> and <a href="./files/messages/Questions_B.txt">Questions B</a> from Canvas. (only one is authentic)</li>
+<li>Use gpg to determine which file is authentic. </li>
+<li>Answer the authentic questions, placing your answers in a text file named Answers.txt</li>
+<li>Sign and encrypt Answers.txt, so that only Bullwinkle can read it AND he knows it was produced by you.</li>
+<li>Upload your encrypted answers to the drop-box as Answers.crypt</li>
+<li>Upload your public key to the drop-box as PubKey.txt </li>
+
+</ul>
+
+<hr>
+<h2>Part E: Trusting Keys</h2>
+<p class="description">
+By default keys are flagged as not trusted so you see warning messages like "WARNING: This key is not certified with a trusted signature!".We can tell GPG that we trust a signature and make this message go away.  We should only tell GPG that we trust a signature when we are <strong>really</strong> sure that we do.
+</pre>
+
+
+<ul>
+<li>Bullwinkle drops by your cubicle and tells you in person that the finger print of his public key is: </li>
+<!-- 1DC5 A2F6 F71D 436A 00D1  8507 2C02 4739 891E 9FCB could this be the one? -->
+<pre class="code">
+E543 1E8C F84B A62F 5F01  B9CE B5F6 A3A7 ADC5 4F6D
+</pre>
+<li>Compare the finger print Bullwinkle gave you against the for the key you have.  If you have a good key, tell GPG so.</li>
+<li>Verify a message from Bullwinkle again, has anything changed?</li>
+</ul>
+
+<hr>
+<h2>Part F: </h2>
+<p class="description">
+One of the most interesting features of GPG is the ability to build a web of trust.  This web allows us to have confidence in the keys of principals we have never met.  If we trust Alice, and Alice trusts Bob, then we can trust Bob too.  
+</p>
+
+<h3>coming soon</h3>
+
+</body>
+</html>

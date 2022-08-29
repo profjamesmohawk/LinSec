@@ -1,0 +1,310 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<meta content="text/html; charset=ISO-8859-1" http-equiv="content-type">
+  	<link rel="stylesheet" href="../jbl_labs.css"> 
+  	<title>
+		Lab 03 - Secure Remote Access
+	</title>
+  
+</head>
+
+<body>
+<h1>Lab 03 - Secure Remote Access</h1>
+<h2>Introduction</h2>
+<p class="description">
+The secure shell (ssh) has become the de facto standard for remote access to UNIX servers.  It can be used to provide: interactive sessions, file transfer, remote command execution, and TCP tunnels.  Passwords or cryptographic keys may be use for authentication.  Today we will investigate these ssh features.
+</p>
+
+<hr>
+<h2>Prerequisites:</h2>
+<h3>Before you start this lab you must have:</h3>
+	<ul>
+		<li>A working build server (yoda) from Lab 01</li>
+	</ul>
+
+
+<hr>
+<h2>Overview:</h2>
+<p class="description"> You will build this configuration.  </p>
+<p> <IMG src="./SecureRemoteAccess.png" alt=""> </p>
+
+<hr>
+<h2>Part A: Build the Servers</h2>
+<p class="description">
+Here's an other chance to show how much easier our lives are because we have a build server.
+</p>
+<p class="description">
+Build earth, wind, and fire to these specifications:
+</p>
+<ul>
+<li>OS configuration as defined in Lab01</li>
+<li>IP addressed shown in diagram above</li>
+<li>hostname set on each node</li>
+<li>two regular users, alice and bob, on every server</li>
+<li>passwords for everyone</li>
+<li>this local hosts file:</li>
+<pre class="code">
+10.1.1.210	earth
+10.1.1.211	wind
+10.1.1.212	fire	
+</pre>
+</ul>
+
+<h3> You have some choice with respect to how you do this, you may use one of two strategies: </h3>
+<ol type="A">
+	<li>Old, Slow, Strategy</li>
+	<ul>
+		<li>build earth, wind, and fire from the CentOS CDs</li>
+		<li>configure earth, wind, and fire with static IP addresses</li>
+	</ul>
+	<br>
+	<li>Slick, Fast, Strategy</li>
+	<ul>
+		<li>buid earth, wind, and fire from <strong>yoda</strong> </li>
+		<li>modify the default Kickstart file to suit this build <strong>or</strong> create a new Kickstart file and have it used only by wind, earth, and fire based on their Ethernet addresses.</li>
+		<li>modify dhcpd.conf to always give wind, earth, and fire the correct addresses</li>
+	</ul>
+</ol>
+<p><em>Note: The 'Slick, Fast' strategy is recommended. </em></p>
+
+<h3>Slick, Fast Strategy steps:</h3>
+<p class="description">
+Note: These examples assume winds' Ethernet address is 08:00:27:68:A8:B1 - your's will be different, and they often show only the configuration changes need for wind - you will need to add code blocks for earth and fire where appropriate.
+</p>
+<ol>
+<li>Configure dhcpd to always give wind, earth, and fire the correct IP addresses and hostnames</li>
+<ol type="a">
+	<li>Add a host block to <strong>/etc/dhcp/dhcpd.conf</strong> for each node</li>
+<pre class="code">
+# 
+# host specific block for wind
+# (note: ethernet address must match nodes' address
+#
+host wind {
+                option host-name "wind";
+                hardware ethernet 08:00:27:68:A8:B1;
+                fixed-address 10.1.1.211;
+}
+</pre>
+<li>Restart the dhcd service</li>
+<br>
+</ol>
+<li>Create new pxe.config files for wind, earth, and fire </li>
+<pre class="code">
+cd /var/lib/tftpboot/pxelinux.cfg
+
+# a pxe config file for lab_03
+cp default lab_03
+
+# point earth to the correct config, note: 0A0101D2 is 10.1.1.210 in hex, try gethostip 10.1.1.210
+ln -s lab_03 0A0101D2
+
+# point wind to the correct config
+ln -s lab_03 0A0101D3
+
+# point fire to the correct config
+ln -s lab_03 0A0101D4
+
+</pre>
+
+<li>Customize the new pxelinux config file we just created, <strong>lab_03</strong>, to point to a new Kickstart file. <em>(key fragment)</em> </li>
+<pre class="code">
+label linux
+  menu label Install system
+  menu default
+  kernel images/RHEL-8.1/vmlinuz
+  append initrd=images/RHEL-8.1/initrd.img ip=dhcp inst.repo=http://10.1.1.100/83 ks=http://10.1.1.100/Kickstart/lab_03.ks inst.kdump_addon=off
+
+</pre>
+<li>Create <strong>/var/www/html/Kickstart/lab_03.ks</strong> based on <strong>/var/www/html/Kickstart/default.ks</strong> with consideration to blocks like this:</li>
+<pre class="code">
+
+# set the firewall to allow only ssh
+firewall --enabled --ssh
+
+# add a user named alice
+user --name=alice --groups=wheel --password=userpass
+
+# hosts
+echo "10.1.1.100 yoda" &gt;&gt;/etc/hosts
+</pre>
+<li>Build earth, wind, and fire </li>
+<li>Use earth, wind, and fire - <em>no additional configuration should be required</em></li>
+	
+</ol>
+
+<hr>
+<h2>Part B: Check Our Work</em></h2>
+<p class="description">
+Let's just have a quick look about to see that everything is as it should be.
+<ul>
+<li>log on to each server as alice</li>
+<li>log on to each server as bob</li>
+<li>run <strong>hostname</strong> and <strong>ip a</strong> on each server</li>
+<li>ssh from earth to wind</li>
+<li>ssh from wind to fire</li>
+<li>ssh from fire to earth</li>
+</ul>
+</p>
+
+<hr>
+<h2>Part C: Man in the middle attack</h2>
+<p class="description">
+A very common mode of attack is the so called 'man in the middle' attack. In a man in the middle attack the attacker intercepts messages destined for a node and pretends to be that node. In a sophisticated attack intercepted traffic is sent to the impersonated node and responses are relayed back to the caller. If this is done well, neither the impersonated node or the caller may realize an attack occurred. We are going to simulate an attack by having fire pose as earth and intercept an ssh connection from wind to earth. In a real attack, fire would forward the data sent from wind to earth and would send all responses from earth back to wind, after having a little look at the data. The purpose of this exercise is to see how ssh handles this type of attack.
+</p>
+
+<ol>
+<h3>Make sure that ssh is working</h3>
+<li>ssh from wind to earth as alice (ssh alice@earth)</li>
+<h3>fire jumps in the middle</h3>
+<li>Unplug earth's network cable (VirtualBox:Devices-&gt;Network Adapters...</li>
+<li>Change fire's IP address to 10.1.1.210 </li>
+<li>ssh from wind to earth as alice, <strong><em>pay careful attention to any messages you see</em></strong></li>
+<h3>Put things back the way you found them</h3>
+<li>Return fire's IP address to 10.1.1.12</li>
+<li>Plug earth's network cable back in</li>
+
+</ol>
+
+<hr>
+<h2>Part D: ssh without passwords - guarding against brute force attacks</h2>
+<p class="description">
+One way of attacking ssh is a brute force attack on passwords. Simply put, this amounts to "trying many passwords until one works". Programs such as hydra automate this (we talk about hydra later). One way to avoid password guessing is to avoid passwords, one way to avoid passwords is to use ssh key pairs. Key-pairs for ssh work in a manner similar to ssl certificates. With ssh you keep the private key on your workstation and place the public key in a directory called .ssh in your home directory on the server. This <a target="blank" href="./ssh_tutorial.pdf">tutorial</a> describes the mechanics of doing this. 
+<br>
+For this example, wind will be alice and bob's main workstation and yoda will be a server they access regularly. We are going to set it up so that both alice and bob can log into yoda from wind without a password. alice will protect her private key with a passphrase and bob will not.
+</p>
+<ol>
+<h3>Make sure ssh is working</h3>
+<li>ssh from wind to yoda as alice and then as bob</li>
+<h3>Setup access for alice</h3>
+<li>Log on to wind as alice</li>
+<li>Follow the steps in the above tutorial (generate key pair, put the public key in the correct spot on yoda, try ssh and scp from wind to yoda) </li>
+<li><font class="hint">Hint: ssh is picky about the permissions on ~/.ssh and ~/.ssh/authorized_keys - only the owner can have write permission.</font></li>
+<h3>Setup access for bob</h3>
+<li>Log on to wind as bob</li>
+<li>Follow the tutorial again</li>
+<h3>Does ssh still work with passwords?</h3>
+<li>Log onto fire</li>
+<li>ssh to yoda as alice</li>
+<h3>Turn off password based ssh authentication on yoda</h3>
+<li>Edit <strong>/etc/ssh/sshd_config</strong> on yoda so that it contains these lines</li>
+<pre class="code">
+PasswordAuthentication no
+ChallengeResponseAuthentication no
+</pre>
+<li>restart the sshd service</li>
+<h3>Does ssh still work with passwords?</h3>
+<li>log onto fire as root</li>
+<li>ssh to yoda as alice</li>
+</ol>
+
+<hr>
+<h2>Part E: Disable remote root access</h2>
+<p class="description">
+It is common policy to disallow remote access for root to force administrators to login under their own account and then <strong>su</strong> to root or to use <strong>sudo</strong>.  This falls under the security axiom of 'allow no shared accounts'
+</p>
+<ol>
+<li>Modify the sshd configuration on yoda so that root is not allowed to log on via ssh</li>
+<br>Hint: <strong>man sshd_config</strong>
+</ol>
+
+<hr>
+<h2>Part F: ssh and remote commands</h2>
+<p class="description">
+In this lab we have used ssh to establish an interactive session and, in its scp form, to copy files.  We can also use ssh to run a single command on a remote server, sending the output of that command back to our session.  This is very handy to solve simple tasks like determining how full the disk is on a remote server, or who is logged onto a remote server.  It can also be used more creatively to do things like remote backup.
+</p>
+<p class="description">
+You are logged on wind as alice what does each of these commands do?
+</p>
+<ol type="a">
+<li>ssh alice@yoda df</li>
+<li>ssh alice@yoda who</li>
+<li>ssh alice@yoda 'tar c .'  &gt; alice_yoda.tar</li> 
+<li>echo "a" | ssh alice@yoda 'cat &gt; f1'</li>
+</ol>
+
+<hr>
+<h2>Part G: ssh tunneling </h2>
+<p class="description">
+Perhaps the coolest, if not the most used, feature of ssh is the ability to create ssh tunnels.  This is also know as port forwarding, which a somewhat more accurate term.  In short ssh can encapsulate all the traffic destine for a local TCP port and send it across an ssh session to a port on an other server.
+<br>This is very useful for administrators.  It allows one to secure traffic that is normally sent in the clear and it allows crafty UNIX administrators to 'work around' certain fire-wall restrictions.
+<br>Here's a very nice little <a target="blank" href="https://help.ubuntu.com/community/SSH/OpenSSH/PortForwarding">tutorial</a> on port forwarding. (an archived version of the page is <a target="blank" href="./tunnel_tutorial.pdf">here</a>)
+</p>
+<h3>Consider the following scenario:</h3>
+<ul>
+<li>You have the systems built for this lab: earth, wind, and fire</li>
+<li>You occasionally need to fetch some files from earth to wind</li>
+<li>You want to use http to transfer the files</li>
+<li>You are not allowed to open any ports other than TCP 22 (ssh) </li>
+</ul>
+<h3>Solution:</h3>
+<p class="description">
+Build an ssh tunnel from wind to earth.  The tunnel will forward wind:8080 (port 8080 on wind) to earth:80 via an ssh connection.  This will allow a local HTTP client on wind to access the Apache server running on earth, even though earth's firewall does not allow http through.
+</p>
+<p class="description">
+This <a href="./Tunnel_diagram.pdf">Diagram of our tunnel</a> might help you visualize what we are building.
+</p>
+<h3>Steps:</h3>
+<ol>
+<h3>Setup Apache on earth</h3>
+
+<li>Install Apache on earth (hint: yum install httpd)</li>
+<li>Create a simple web page on earth called <strong>hello.html</strong></li>
+<li>Test that httpd is up and running by fetching hello.html locally on earth (from earth to earth) with curl</li>
+<pre class="code">
+curl http://localhost/hello.html
+</pre>
+<h3>Demonstrate that earth:80 is closed to outsiders </h3>
+<li>Log on to wind</li>
+<li>Try to download hello.html from earth</li>
+<pre class="code">
+curl http://yoda/hello.html
+</pre>
+<h3>Build a tunnel from wind to earth</h3>
+<li>Log on to wind</li>
+<li>Invoke ssh with -L </li>
+<pre class="code">
+ssh -L 8080:earth:80 -N alice@earth
+</pre>
+<li>In an other window (on wind) run curl through the tunnel</li>
+<pre class="code">
+curl http://localhost:8080/hello.html
+</pre>
+<h3>Prove that the traffic was flowing through the tunnel</h3>
+<li>Tear down the tunnel by typing <ctl>-c in the window where the tunnel is running</li>
+<li>Try step 8 again (it should fail now) </li>
+<li>Reestablish the tunnel</li>
+<li>Try step 8 again (it should work now)</li>
+<h3>Use wind as a gateway from your workstation to yoda</h3>
+<li>Open port 8081 on wind's firewall <em>(hint: check your admin notes for firewallcmd)</em> </li>
+<li>Build a tunnel from wind:8081 to earth:80</li>
+<pre class="code">
+# on wind
+ssh -L wind:8081:earth:80 -N alice@earth
+</pre>
+<li>Point your desktop web browser to wind:8081/hello.html</li>
+<br><strong>Note:</strong> You will need to add earth and wind to the hosts file on your workstation.
+</ol>
+<hr>
+<h2>Questions:</h2>
+<p class="description">
+Complete the quiz in Canvas for this lab.  Here is a partial preview of the questions.
+</p>
+<ol>
+
+<li>You are logged on wind as alice what does each of these commands do?</li>
+	<ol type="a">
+	<li>ssh alice@yoda who</li>
+	<li>ssh alice@yoda 'tar c .'  &gt; alice_yoda.tar</li> 
+	<li>echo "a" | ssh alice@yoda 'cat &gt; f1'</li>
+	</ol>
+<br>
+<li>How does ssh guard against man in the middle attacks?</strong> do?</li>
+<li>Explain what each argument in this command does:</li>
+<pre class="code">
+ssh -L 10.1.1.11:8081:yoda:80 -N alice@yoda
+</pre>
+</ol>
+</body>
+</html>

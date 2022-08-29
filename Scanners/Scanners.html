@@ -1,0 +1,362 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd"> <html>
+<head>
+	<meta content="text/html; charset=ISO-8859-1" http-equiv="content-type">
+  	<link rel="stylesheet" href="../jbl_labs.css"> 
+  	<title>
+	Secruity Scanners and Intrusion Detection
+	</title>
+  
+</head>
+
+<body>
+<h1>Lab 04 - Security Scanners and Intrusion Detection</h1>
+<h2>Introduction</h2>
+<p class="description">
+This week will in look at two related topics, security scanners and intrusion detection systems (IDS).
+<br>
+<br>
+Security scanning is common practice.  Many companies will not allow a system to be placed on their production network until it has passed a security scan.  In this lab we will scan some of the servers we have built in previous labs.  The most common security scanners inspect a system from the network looking for open ports and unprotected services.
+<br>
+<br>
+In this lab we will also investigate the class of intrusion detection systems that monitor the nodes file system looking for changes to key files.  The best know IDS of this type is Trip Wire.
+</p>
+
+<h3>Note: This is very serious business, only scan a system after obtaining explicit permission to do so from the system's owner.</h3>
+
+<h3>Moving on...</h3>
+<p class="description">
+Right then, let's see if anyone left their front door open.
+</p>
+
+
+
+<hr>
+<h2>Prerequisites:</h2>
+<h3>Before you start this lab you must have:</h3>
+	<ul>
+		<li>A working build server (yoda) from Lab 01</li>
+	</ul>
+
+
+<h3>Before you start this lab you should be familiar with:</h3>
+	<ul>
+		<li>Software installation with YUM</li>
+		<li>TCP networking</li>
+		<li>Common unix 'back-doors' (we will review at the start of the lab)</li>
+		<li>The find command (we will review at the start of the lab)</li>
+		<li>The diff command (we will review at the start of the lab) </li>
+		<li>Check-sums (like the md5sum command)</li>
+		<li>Basic shell scripting (if you want to build a slick IDS)</li>
+	</ul>
+<hr>
+<h2>Grading:</h2>
+<p class="description">
+Answer the questions found at the end of the lab.
+</p>
+
+<hr>
+<h2>Overview:</h2>
+<p class="description"> 
+Bullwinkle, out intrepid IT director, has hired security consultants Boris and Natasha to performing security scans on all of our production servers.
+</p>
+<p class="description">
+Smart cookie that you are, you decide to experiment with NMAP on a test server before doing anything that touches production.
+<br>
+<br>
+Paranoid admin that you are, you decide to install an IDS on at least some of your systems, so you can see if Boris and Natashia leave any presents behind.
+</p>
+
+<p class="description">
+Your basic plan is:
+</p>
+<ol>
+<li>Build a test server using the standard Acme configuration: </li>
+	<ol type="a">
+		<li>hostname: kenobi</li>
+		<li>ip address: 10.1.1.32</li>
+		<li>standard Acme build</li>
+	</ol>
+<li>Build a server to host NMAP and Nessus</li>
+	<ol type="a">
+		<li>hostname: sherlock</li>
+		<li>ip address: 10.1.1.31</li>
+		<li>standard Acme build</li>
+		<li><strong>16GB disk </strong> </li>
+	</ol>
+<li>Run test scans against yoda and kenobi to become familiar with NMAP</li>
+<li>Build a simple IDS and test it using trojan horse programs supplied by your instructor</li>
+<li>Write a report detailing your findings</li>
+</ol>
+
+<hr>
+
+<h2>Part A: Build The Servers:</h2>
+<p class="description">
+This should be getting pretty easy by now.  Just build the servers to look like those in the diagram.
+</p>
+<IMG src="./Scanners.png" alt=""> 
+<h3>Notes:</h3>
+	<ol type="a">
+		<li>You can use dhcp to assign the IP address and hostname if you like</li>
+		<li>The standard Acme Corp. Kickstart file developed in Lab 01 should be fine for both kenobi and sherlock </li>
+		<li>Install NMAP on sherlock (it should already be in your Acme Base repo on yoda)</li>
+<pre class="code">
+yum install nmap
+</pre>
+	<li>Grow the / file system to make room for the Nessus install.
+	<ol>
+	<li>Grow the Logical Volume on which / is stored
+<pre class="code">
+lvextend /dev/VG01/LV_root -l +100%FREE
+</pre>
+	</li>
+	<li>Grow the / file system
+<pre class="code">
+resize2fs /dev/mapper/VG01-LV_root
+</pre>
+	</li>
+	<li>Check our work <em> (should now be over XX GB )</em>
+	<pre class="code">
+df -h | grep LV_root
+</pre>
+	</li>
+	</ol>
+	</li>
+	</ol>
+
+<hr>
+<h2><em>Parts B through D deal with scanners...</em></h2>
+<h2>Part B: Run Test Scans</h2>
+<p class="description">
+Before we let NMAP loose on our network, we want to know how it behaves and what to expect.  By running NMAP against a test server, <strong>kenobi</strong>, we can determine how NMAP works and we can have confidence that running NMAP won't break the server we are scanning.  We can also make changes to <strong>kenobi</strong> between scans that would be impossible to make on production servers (like lowering the firewall)
+</p>
+</ol>
+<font class="hint"> In many steps you are given a choice between two commands, look at the man page and pick the appropriate one.</font>
+<p><strong>Note: all nmap commands are to be run from sherlock</strong></p>
+<ol>
+<h3>Scan with the firewall down</h3>
+<li>Log on to kenobi and disable the local firewall</li>
+<pre class="code">
+systemctl stop firewalld
+</pre>
+<li>Run the simplest possible NMAP scan against kenobi </li>
+<pre class="code">
+nmap -n -v -sL 10.1.1.232
+</pre>
+or
+<pre class="code">
+nmap -v -sL 10.1.1.232
+</pre>
+<li>Let's find out a little more, run a simple Port Scan</li>
+<pre class="code">
+nmap -n -v  -sT 10.1.1.232
+</pre>
+or
+<pre class="code">
+nmap -n -v -sS 10.1.1.232
+</pre>
+<li>Can we tell exactly what service is running on each of those open ports?</li>
+<pre class="code">
+nmap -n -v -sT -sV 10.1.1.232
+</pre>
+<li>Can we tell what O/S is running?</li>
+<pre class="code">
+nmap -n -v -O 10.1.1.232
+</pre>
+or
+<pre class="code">
+nmap -n -v -O --osscan-guess 10.1.1.232
+</pre>
+
+<h3>Scan with the firewall up</h3>
+<li>Log on to kenobi and enable the local firewall</li>
+<pre class="code">
+service iptables start
+</pre>
+<li>Run the simplest possible NMAP scan against kenobi </li>
+<pre class="code">
+nmap -n -v -sL 10.1.1.232
+</pre>
+or
+<pre class="code">
+nmap -v -sL 10.1.1.232
+</pre>
+<li>Let's find out a little more, run a simple Port Scan <font class="hint">(Feel free to ctl-c a scan that looks like it is taking too long.)</font> </li>
+<pre class="code">
+nmap -n -v -sT 10.1.1.232
+</pre>
+or
+<pre class="code">
+nmap -n -v -T4 -sT 10.1.1.232
+</pre>
+<ul>
+	<em>
+	<li>Why do scans take longer when the system to be scanned is behind a firewall?</li>
+	<li>Can you tell from the NMAP out-put if a firewall is in place?</li>
+	<li>What does the -T4 switch do?</li>
+	</em>
+</ul>
+<br>
+<li>Put it all together.
+<pre class="code">
+nmap -n -v -A -T4 10.1.1.232
+</pre>
+
+</ol>
+
+<hr>
+<h2>Part C: Scan yoda</h2>
+<p class="description">
+While we are in the neighborhood, let's scan yoda.
+</p>
+<ol>
+<li>Run the all singing, all dancing nmap command against yoda</li>
+<pre class="code">
+nmap -n -v -A -T4 10.1.1.100
+</pre>
+</ol>
+
+<hr>
+<h2>Part D: Late Breaking News Flash !!! </h2>
+<p class="description">
+Freddy, the sushi loving Windows Administrator who sits down the hall, overheard Boris and Natasha at lunch.  They were talking about using Nessus to scan your servers.  
+</p>
+<p class="description">
+We really should have a look at Nessus.  Nessus is available as a trial.  A valid email address is required to register for the trial, use your Mohawk email.
+</p>
+<ul>
+<li>Nessus can be obtained from <a target="blank" href="http://www.tenable.com/">Tenable Software</a> </li>
+<li>Please use the <em>Nessus Expert</em> license</li>
+<li>Install Nessus on sherlock.</li>
+<li>Nessus scans take longer than the nmap command we have been using, just scan <strong>yoda</strong> and <strong>kenobi</strong>.</li>
+<li>Here is a <a href="./nessus_scan_yoda.html">sample Nessus report</a> I ran against yoda.
+</li>
+</ul>
+<hr>
+<h2><em>Parts E through H deal with intrusion detection...</em></h2>
+<h2>Part E: Foundation Skills</h2>
+<p class="description">
+To build a simple IDS we need to have strong skills with 3 commands: find; md5sum; and diff
+</p>
+<ol>
+<h3>The find command</h3>
+<li>Open a putty session on your Windows workstation and ssh to kenobi as root</li>
+<li>Write a find command to find all files that contain the string <strong>rc</strong> anywhere in their name
+<br>Hints:
+<ul>
+<li>-name</li>
+<li>put the file name in quotes to prevent globbing</li>
+</ul>
+</li>
+<li>Expand upon your find command modifying it to perform a long file listing (ls -l) on each file it finds (hint: -exec is really picky about the trailing \;)</li>
+<li>Write a find command to perform a long listing (ls -l) on all executable files on the system. (note: you must find executable by owner, group, or other)</li>
+<li>Write a find command to perform a long listing on all set-uid programs</li>
+
+<h3>The md5sum command</h3>
+<li>Create a small text file named foo.txt containing the first thought that pops into your head</li>
+<li>Run <strong>md5sum</strong> on foo.txt</li>
+<li>Change the contents of foo.txt <em>very</em> slightly</li>
+<li>Run <strong>md5sum</strong> on foo.txt again</li>
+<li>Compare the output from the two <strong>md5sum</strong> commands</li>
+<li>Write a find command to execute <strong>md5sum</strong> on every executable in the file system</li>
+
+<h3>The diff command</h3>
+<li>Create a text file bar.txt containing a list of your 10 closest friends, one on each line</li>
+<li>Copy bar.txt to bar_a.txt</li>
+<li>Execute:</li>
+<pre class="code">
+diff bar.txt bar_a.txt
+</pre>
+<li>Change the spelling of one friend's name in bar.txt and run diff again</li>
+<li>Add a friend to bar_a.txt and run diff again</li>
+<li>Remove two friends from bar_a.txt and run diff again</li>
+</ol>
+
+
+<hr>
+<h2>Part F: Build an IDS</h2>
+<p class="description">
+Congratulations, you now have the basic skills required to build a simple IDS. Our strategy will be to store the md5 checksum for each key system file. We can then check any file's md5 checksum against its known good value to see if the file has been tampered with.
+</p>
+<ol>
+<li>Create <strong>/acme_tools/ids</strong> to hold your IDS scripts and data</li>
+<li>Write a shell script named <strong>/acme_tools/ids/take_inventory.sh</strong> to create a list of key system files and their md5 checksum
+	<ul>
+	<li>the file must contain the out-put of the <strong>md5sum</strong> command for: </li>
+	<ol type="a">
+	<li>all executables (files only not directories);</li> 
+	<li>the entire contents of /etc (files only not directories)</li>
+	</ol>
+	<li>pipe the out-put of each find through the sort command (this will make comparisons easier)</li>
+	<li>store the results in time stamped file <strong>/acme_tools/ids/inventory.&lt;yyyymmdd_hhmmss&gt;</strong> </li>
+	</ul>
+	<br>The contents of <strong>inventory.20120110.13:14:22</strong> should look something like this:
+<pre class="code">
+2e34bf59ff292b2e03a0701a865881cf  /etc/pam.d/reboot
+6901806c889b53033751da610f79e8de  /etc/pam.d/vsftpd
+af140f3d3ae7fcf504f103e72256cfef  /etc/pam.d/other
+</pre>
+</li>
+<li>Run <strong>/acme_tools/ids/take_inventory.sh</strong></li>
+<li>Make a small change to any file under <strong>/etc</strong></li>
+<li>Run <strong>/acme_tools/ids/take_inventory.sh</strong> again </li>
+<li>Run diff on the two inventory files produced by steps 3 and 5</li>
+</ol>
+<h3>Note:</h3>
+	<ul>
+		<li>Your find command will complain about some entries under /proc</li>
+		<li>Your md5sum command (executed by find) will complain about /sys/devices/system/memory/probe</li>
+		<li><strong> It is safe to ignore these complaints.  </strong>
+	</ul>
+
+<hr>
+<h2>Part G: <a target="_blank" target="blank" href="http://www.google.ca/search?q=spy+vs+spy">Spy vs. Spy</a> (optional)</h2>
+<p class="description">
+Here's a change to use your skills for good and for evil.  It is also a chance to practice your skills before tackling "Spy vs. Professor"
+</p>
+<ol>
+<li>Exchange root passwords with your lab partner. </li>
+<li>Log onto each other's server and add one or two back-doors, do not tamper with the contents of <strong>/acme_tools/ids</strong> </li>
+<li>Return to your own server and see if you can find the back-doors left by your partner </li>
+<li>Compare notes with your partner</li>
+<li>If required get your partner's help to remove the back-doors</li>
+</ol>
+
+<hr>
+<h2>Part H: Spy vs. Professor </h2>
+<p class="description">
+Here is your chance to test your IDS against a couple of trojan-horse programs written by your instructor.
+</p>
+<ol>
+<li>Download and install <a href="./trojan/trojan_a_b.tgz">trojan-horse programs</a> </li>
+<li>Run trojan_horse_a and see if you and your IDS can spot and close the back-doors. </li>
+<ul>
+	<li>Have a look at <strong>/tmp/</strong> </li>
+	<li>Log in as alice and try running <strong>/tmp/tmp_system.log </strong></li>
+	<li>Can you find an other file with the same md5 check-sum as <strong>/tmp/tmp_system.log</strong> ?</li>
+</ul>
+<li>Run trojan_horse_b and see if you and your IDS can spot and close the back-doors. (This one's trickier) </li>
+</ol>
+
+<hr>
+<h2>Part I: Grading</h2>
+<p class="description">
+Answer these questions and submit them to Canvas.
+</p>
+<ol>
+<h3>Port scanner </h3>
+<li>Submit a copy of your e-mail to Rocky from Part D.
+
+<h3>IDS questions </h3>
+<li>What back-doors where left by trojan_a?</li>
+<li>What back-doors where left by trojan_b?</li>
+<li>What extra trick did trojan_b have up its sleeve?</li>
+</ol>
+
+
+
+<p class="description">
+Each report must be in HTML or PDF format.
+</p>
+</body>
+</html>

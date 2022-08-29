@@ -1,0 +1,87 @@
+<html>
+<head>
+<style type="text/css">
+table { margin: 1em; border-collapse: collapse; }
+td, th { padding: .3em; border: 2px #ccc solid; }
+</style>
+</head>
+<body><table>
+<h2> COMP-10032 Grading Script: Automated Build </h2>
+<tr>
+<td valign="top"> When was I built? </td>
+<td><pre>
+ 
+-rw-------. 1 root root 2286 Jun 25 15:03 /root/anaconda-ks.cfg
+ 
+</pre>
+</td>
+</tr>
+<tr>
+<td valign="top"> When was I now? </td>
+<td><pre>
+ 
+Sat Jun 25 15:25:08 EDT 2022
+ 
+</pre>
+</td>
+</tr>
+<tr>
+<td valign="top"> Who am I? </td>
+<td><pre>
+ 
+s03
+ 
+</pre>
+</td>
+</tr>
+<tr>
+<td valign="top"> /etc/fstab </td>
+<td><pre>
+ 
+
+#
+# /etc/fstab
+# Created by anaconda on Sat Jun 25 18:56:10 2022
+#
+# Accessible filesystems, by reference, are maintained under '/dev/disk/'.
+# See man pages fstab(5), findfs(8), mount(8) and/or blkid(8) for more info.
+#
+# After editing this file, run 'systemctl daemon-reload' to update systemd
+# units generated from this file.
+#
+/dev/mapper/VG01-LV_root /                       ext4    defaults        1 1
+UUID=db27c36a-cda5-422e-8dc1-aa2f64a67668 /boot                   ext4    defaults        1 2
+/dev/mapper/VG01-LV_home /home                   ext4    defaults        1 2
+/dev/mapper/VG01-LV_tmp /tmp                    ext4    defaults        1 2
+/dev/mapper/VG01-LV_usr /usr                    ext4    defaults        1 2
+/dev/mapper/VG01-LV_var /var                    ext4    defaults        1 2
+/dev/mapper/VG01-LV_swap none                    swap    defaults        0 0
+ 
+</pre>
+</td>
+</tr>
+<tr>
+<td valign="top"> df -h </td>
+<td><pre>
+ 
+Filesystem                Size  Used Avail Use% Mounted on
+/dev/mapper/VG01-LV_root  969M   25M  878M   3% /
+/dev/mapper/VG01-LV_usr   2.4G  1.2G  1.1G  54% /usr
+/dev/sda1                 190M  135M   41M  77% /boot
+/dev/mapper/VG01-LV_home  190M  1.6M  175M   1% /home
+/dev/mapper/VG01-LV_var   477M  160M  288M  36% /var
+/dev/mapper/VG01-LV_tmp   190M  1.6M  175M   1% /tmp
+ 
+</pre>
+</td>
+</tr>
+<tr>
+<td valign="top"> Was I patched?<br><em>culr 7.61.1-18.el8 <br>from miniPatch</em> </td>
+<td><pre>
+ 
+curl.x86_64                       7.61.1-18.el8                       @miniPatch
+ 
+</pre>
+</td>
+</tr>
+</table></body></html>

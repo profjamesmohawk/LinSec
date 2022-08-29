@@ -1,0 +1,50 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<meta content="text/html; charset=ISO-8859-1" http-equiv="content-type">
+  	<link rel="stylesheet" href="./jbl_labs.css"> 
+  	<title>
+		Lab 04 - Instrutor's Notes
+	</title>
+  
+</head>
+
+<body>
+<h1>Lab 04:Instructor's Notes</h1>
+
+<h2>Chalk and Talk</h2>
+<ul>
+<li>What's an IDS (tripwire)</li>
+<li>IDS classes: integrity checkers, log monitors, network based monitors, 'application firewalls'</li>
+<br>
+<li>find review and examples, including -exec</li>
+<li>md5 review and examples</li>
+<li>sort review and examples</li>
+</ul>
+<h2>Reference implementation:</h2>
+<h3>take_inventory.sh</h3>
+<pre class="code">
+#!/bin/bash
+
+MD5_CMD=/usr/bin/md5sum
+
+FILE_NAME=/acme_tools/ide/inventory.$(date +%Y%m%d_%H%M%S)
+
+
+echo "Taking inventory of executables... "
+echo " note: "
+echo "  1) you may get some complaints about /proc files"
+echo "  2) will likely get a complaint about /sys/devices/system/memory/probe"
+echo " You can safely ignore these complaints"
+find /  -type f -perm /111  -exec $MD5_CMD {} \; | sort > $FILE_NAME
+echo "...done with executable inventory"
+
+echo " "
+echo -n "Taking inventory of /etc..."
+find /etc -type f -exec $MD5_CMD {} \; | sort >> $FILE_NAME
+echo "done"
+</pre>
+<hr>
+<strong><a href="./04_instructor_notes_trojan.html">Description of what the trojans do</a> </strong>
+</body>
+</html>

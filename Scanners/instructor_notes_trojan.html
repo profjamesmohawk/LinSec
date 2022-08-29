@@ -1,0 +1,49 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<meta content="text/html; charset=ISO-8859-1" http-equiv="content-type">
+  	<link rel="stylesheet" href="./jbl_labs.css"> 
+  	<title>
+		Lab 04 - Instrutor's Notes (What the trojans do)
+	</title>
+  
+</head>
+
+<body>
+<h1>Lab 04:Instructor's Notes (what the trojans do)</h1>
+
+<h2>WARNING - trojans need updating for setuid limits in CentOS</h2>
+
+<h2>trojan_a</h2>
+<ul>
+	<li>
+	create an SUID copy of /usr/bin/vim named /tmp/tmp_system.log
+	<br><em>Note: previous versions copied /bin/bash, but the bash code on CentOS ignores SUID</em>
+	</li>
+	<li>
+	add a user named ronda, with password 'password' and a UID of 0
+	</li>
+	<li>
+	add a user named will, with password 'password' and membership in wheel
+	</li>
+	<li>
+	copy trojan_a to /bin/syscfg
+	</li>
+	<li>
+	add a line to /etc/rc.local that calls /bin/syscfg
+	</li>
+</ul>
+<h2>trojan_b</h2>
+<ul>
+	<li>
+	everything trojan_a does
+	</li>
+	<li>
+	fork and run as a daemon
+	</li>
+	<li>
+	in daemon mode, wake every second and re-open all the doors
+	</li>
+</ul>
+</body>
+</html>

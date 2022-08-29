@@ -1,0 +1,238 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd"> <html>
+<head>
+	<meta content="text/html; charset=ISO-8859-1" http-equiv="content-type">
+  	<link rel="stylesheet" href="../jbl_labs.css"> 
+  	<title>
+		nftables configuration
+	</title>
+  
+</head>
+
+<body>
+
+<h1>nftables configuration for r01</h1>
+<h2>Part A: Enable nftables</h2>
+<p class="description">
+The nftables service on RHEL reads it's configuration from /etc/sysconfig/nftables.conf
+</p>
+<ol>
+<li>Create an empty rule set with one table, named my_inet_table, belonging to the inet family.  Make <strong>/etc/sysconfig/nftables.conf</strong> look like this
+<pre class="code">
+table inet my_inet_table {
+
+}
+</pre>
+</li>
+<li>Start and enable the service
+<pre class="code">
+systemctl enable nftables.service
+systemctl start nftables.service
+</pre>
+</li>
+<li>List the configured tables (there should be one inet table named my_inet_table)
+<pre class="code">
+nft list tables
+</pre>
+</li>
+<li>List the chains and rules from our table (family=inet, name=my_inet_table).  There should be no chains.
+<pre class="code">
+nft list table inet my_inet_table
+</pre>
+</li>
+<li>Compare the output from the last command with the contents of <strong>/etc/sysconfig/nftables.conf</strong>
+</li>
+</ol>
+<hr>
+<h2>Part B: Build our firewall input rules</h2>
+<p class="description">
+Remember to run <span class=cmd>systemctl reload nftables.service</span> to reload the rules after edits.
+</p>
+<p class="description">
+These rules will apply only to packets with a destination address of r01.  Packets that are being routed through r01 are not subject to these rules.
+</p>
+<p class="description">
+<strong>Note:</strong> Check our work after each step by trying 'something that should work' and 'something that should not work' after each change.
+</p>
+<ol>
+<li>Add chain connected to the input hook. Set the default policy on our input chain to <strong>drop</strong> by making /etc/sysconfig/nftables.conf look like..
+<pre class="code">
+table inet my_inet_table {
+
+        chain input {
+                # declare new chain named filter hooked to the input entry point and set default policy to drop
+                type filter hook input priority 0; policy drop
+        }
+}
+</pre>
+</li>
+<li>Reload with systemctl reload nftables.service <em>(this will break ssh sessions)</em></li>
+<li>Allow ssh connections by adding a rule with an action of <strong>accept</strong>
+<pre class="code">
+	chain input {
+		type filter hook input priority 0; policy drop;
+
+		# allow ssh 
+		tcp dport ssh accept
+	}
+</pre>
+</li>
+<li>r01 will now allow incoming ssh sessions, but no other network traffic.  We can send any packets we want from r01, but unless the return traffic has a destination of port 22, it will not be allowed in.  Stateful rules can solve this problem.  The stateful rules engine remembers all active TCP connections and can be told to accept any packet that is part of a valid conversation.  One rule is all that is required to enable this coolness...
+<pre class="code">
+        chain input {
+                type filter hook input priority 0; policy drop
+
+                # use connection tracking to allow packets associated with active conversations
+                ct state established,related accept
+
+                tcp dport ssh accept
+        }
+</pre>
+</li>
+<li>We can now tighten or rule to allow ssh.  As configured, we will accept <strong>every</strong> packet with a destination port of 22.  This could leave us open to attacks that start a TCP conversation 'in the middle'.  To increase our security we modify our ssh rule to allow only <strong>new</strong> connections on port 22.  All following packets will be covered by the <em>established/related</em> rule we added in the previous step.
+<pre class="code">
+        chain input {
+                type filter hook input priority 0; policy drop
+
+                ct state established,related accept
+
+                # allow new tcp connections to port 22 (ssh)
+                tcp dport ssh ct state new accept
+        }
+</pre>
+</li>
+<li>The ability to have multiple actions in each chain makes it easy to add logging to any rule with the <strong>log</strong> action.  We will start by logging all ssh connections to syslog.
+<pre class="code">
+        chain input {
+                type filter hook input priority 0; policy drop
+
+                ct state established,related accept
+
+                # accept new ssh connection and log to syslog
+                tcp dport ssh ct state new log accept
+        }
+</pre>
+</li>
+
+<li>Check our work: 
+<ol type="a">
+<li>ssh from w01 to r01blue </li>
+<li>Look for the matching log message:
+<pre class="code">
+grep IN= /var/log/messages
+</pre>
+</li>
+</ol>
+</li>
+
+<li>Let r01 talk to itself.  Many programs communicate between components via local ip connections.  Our firewall won't allow that.
+To demonstrate this, we will use curl to connect to localhost:80.  The firewall is configured to drop packets, so our curl command will hang.
+<pre class="code">
+curl http://localhost
+</pre>
+</li>
+
+<li>
+Use the input interface <strong>(iif)</strong> match in rule to allow all local connections
+<pre class="code">
+        chain input {
+                type filter hook input priority 0; policy drop
+
+                ct state established,related accept
+
+                tcp dport ssh ct state new log accept
+
+                # allow any packet if it is being sent to the look back interface
+                iif lo accept
+        }
+</pre>
+</li>
+<li>Check our work.  wget should now return 'connection refused' indicating that the packet was delivered but no process is listening on port 80.
+<pre class="code">
+# on r01 try... 
+wget http://localhost
+</pre>
+</li>
+
+<li>We can use interface matching in conjunction with port matching to accept only packets that came in on a given interface.  We will add an <strong>iif</strong> match to our ssh chain so that only hosts on blue can ssh to r01. (recall the blue network is connected to the <strong>enp0s3</strong> interface.
+<pre class="code">
+        chain input {
+                type filter hook input priority 0; policy drop
+
+                ct state established,related accept
+
+                # allow new ssh packets that came in on enp0s3 (blue)
+                iif enp0s3 tcp dport ssh ct state new log  accept
+
+                iif lo accept
+        }
+</pre>
+</li>
+<li>ICMP traffic can be a security risk but we will allow it as this is an internal firewall.
+<pre class="code">
+        chain input {
+                type filter hook input priority 0; policy drop
+
+                ct state established,related accept
+
+                # allow new ssh packets that came in on enp0s3 (blue)
+                iif enp0s3 tcp dport ssh ct state new log accept
+
+                # allow any packet if it is being sent to the look back interface
+                iif lo accept
+
+                # accept all icmp packets (v4 and v6)
+                ip protocol icmp accept
+                ip6 nexthdr icmpv6 accept
+        }
+</pre>
+</li>
+<li>We will exploit the fact that we can add a chain consisting of nothing but a rule, to log all packets just before they are dropped.  This might help with our debugging.
+<pre class="code">
+        chain input {
+                type filter hook input priority 0; policy drop
+
+                ct state established,related accept
+
+                # allow new ssh packets that came in on enp0s3 (blue)
+                iif enp0s3 tcp dport ssh ct state new log accept
+
+                # allow any packet if it is being sent to the look back interface
+                iif lo accept
+
+                # accept all icmp packets (v4 and v6)
+                ip protocol icmp accept
+                ip6 nexthdr icmpv6 accept
+
+                # log all packets, just before dropped 
+                log prefix "dropping: "
+        }
+</pre>
+</li>
+</ol>
+
+<hr>
+<h2>Part C: Forward rules</h2>
+
+<ol>
+<li>To control the filtering of packets passing through the router, we attach a chain to the <strong>forward</strong> hook.   <strong>Note:</strong>Packets passing through the router are not processed by chains attached to  the input or output hooks.  
+<br>This chain will only allow ICMP across the router.
+<pre class="code">
+        chain forward {
+                type filter hook forward priority 0; plolicy drop;
+
+                # accept all icmp packets (v4 and v6)
+                ip protocol icmp accept
+                ip6 nexthdr icmpv6 accept
+        }
+</pre>
+</li>
+<li>From here we can add rules to the chain just like we did in Part B.  Add rules such that...
+<ol type="a">
+<li>http connections are allowed from blue to red, but not red to blue </li>
+<li>ssh connections are allowed from blue to red, but not red to blue </li>
+</ol>
+</li>
+</ol>
+
+</body>
+</html>

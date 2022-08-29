@@ -1,0 +1,220 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<meta content="text/html; charset=ISO-8859-1" http-equiv="content-type">
+  	<link rel="stylesheet" href="../jbl_labs.css"> 
+  	<title>
+		Automated Build Customization
+	</title>
+  
+</head>
+
+<body>
+<h1> Automated Build Customization </h1>
+
+<h2>Introduction</h2>
+<p class="description">
+We now have a working build server.  When we use yoda to build systems, we get consistent installations.  The configuration of these systems is close to what.  We want o minimize post-install customization to save time and improve quality.
+</p>
+<p class="description">
+Today we will customize our build process to:
+<ul>
+<li>Automatically configure systems to use yoda as their YUM/DNF repo server </li>
+<li>Use the <span class=cmd>%post</span> section of the Kickstart file to configure root's environment </li>
+<li>Specify a custom file system layout </li>
+</ul>
+</p>
+
+<hr>
+<h2>Prerequisites:</h2>
+<h3>Before you start this lab you must have:</h3>
+	<ul>
+		<li>A working build server, yoda, from Lab 1</li>
+		<li>The course VirtualBox appliance containing <strong>w01</strong> </li>
+	</ul>
+
+<h3>Reference Materials:</h3>
+<ul>
+<li><a href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/performing_an_advanced_rhel_installation/kickstart-commands-and-options-reference_installing-rhel-as-an-experienced-user">Kickstart Commands (from RH)</a></li>
+<li><a href="https://pykickstart.readthedocs.io/en/latest/kickstart-docs.html">Kickstart File Documentation</a> </li>
+</ul>
+
+<hr>
+<h2>Part A: Create YUM repo files on yoda </h2>
+<p class="description">
+Yoda is currently configured to use repositories from a local DVD.  All the files from that DVD where copied to yoda's /var/www tree and published via http.
+In name of consistency, and to avoid "forgot to mound the DVD" errors, we will change yoda's repo files to point to yoda's published repositories.
+</p>
+<ol>
+<li>Rename the BaseOS repo file
+<pre class="code">
+cd /etc/yum.repos.d
+mv LocalBase.repo yodaBaseOS.repo
+</pre>
+</li>
+<li>Edit <strong>yodaBaseOS.repo</strong> so that it looks like this:
+<pre class="code">
+[yodaBaseOS]
+metadata_expire=-1
+name=yodaBaseOS
+baseurl=http://yoda/83/BaseOS
+enabled=1
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+</pre>
+</li>
+<li>Check our work. <em> <span class=cmd>yum list</span> should now show packages from the <strong>yodaBaseOS</strong> repo.</em>
+<pre class="code">
+yum clean all
+yum list | more
+</pre>
+we can use the "power of pipelines"&copy; to see just the repo names
+<pre class="code">
+yum list | tail -n +8 | awk '//{ print $3;}' | sort -u
+</pre>
+<em>
+Why do some repo names start with @?
+<br>
+Can you decipher the meaning of the @anaconda repo?
+</em>
+</li>
+<li>Repeat this process for the <strong>LocalApp.repo</strong> </li>
+<li>Check our work. <em> We should  now see packages from <strong>yodaAppStream</strong></em>
+<pre class="code">
+yum clean all
+yum list | tail -n +8 | awk '//{ print $3;}' | sort -u
+</pre>
+</li>
+</ol>
+<hr>
+<h2>Part B: Patch yoda</h2>
+<p class="description">
+yoda hosts a patch repo, miniUpdate, but can not access it to patch itself.  We will fix that now.
+</p>
+<ol>
+<li>Use <span class=cmd>scp</span> to copy <strong>/etc/yum.repos.d/miniPatch.repo</strong> from w01 to yoda.  </li>
+<li>Check our work.  <em>We should  now see packages from <strong>miniPatch</strong></em>
+<pre class="code">
+yum clean all
+yum list | tail -n +8 | awk '//{ print $3; }' | sort -u
+</pre>
+</li>
+<li>Ooops.  Looks like we forgot to change the baseurl from <strong>y01</strong> to <strong>yoda</strong> in miniPatch.repo
+<br>Please make that change now.</li>
+<li>Check our work again...
+<pre class="code">
+yum clean all
+yum list | tail -n +8 | awk '//{ print $3;}' | sort -u
+</pre>
+</li>
+<li>Now that we can see the miniUpdate repo, it is time to patch yoda <em>You should see updates for curl, libcurl, and sudo</em>
+<pre class="code">
+yum update
+</pre>
+</li>
+</ol>
+<hr>
+<h2>Part C: Getting our repo files on every new server</h2>
+<p class="description">
+By default the installer sets up systems to use Red Hat's repositories from the open 'net.  We want all of our servers to use only packages and patches we have tested.  We will configure every server we build to use yoda for all repositories.
+</p>
+<p class="description">
+We need to modify our Kickstart file so that the repo files are created on each system.  Kickstart does not have a command to do this.  We will have to use shell commands in the %post section.  We can use echo to create the files, or we can use curl to download them.  We will use the curl strategy.
+</p>
+<ol>
+<li>Make a directory under the http document root on yoda to host the repo files
+<pre class="code">
+mkdir /var/www/html/yum.repos.d
+</pre>
+</li 
+<li>Publish our repo files
+<pre class="code">
+cp -v /etc/yum.repos.d/*repo /var/www/html/yum.repos.d
+</pre>
+</li>
+<li>Check our work by downloading with curl
+<pre class="code">
+cd /tmp
+curl http://yoda/yum.repos.d/miniPatch.repo
+</pre>
+</li>
+<li>Demonstrate the <strong>-O</strong> curl flag
+<pre class="code">
+ls miniPatch.repo
+curl -O http://yoda/yum.repos.d/miniPatch.repo
+cat miniPatch.repo
+</pre>
+</li>
+<li>Create a backup of our working Kickstart file
+<pre class="code">
+cp -a /var/www/html/Kickstart/default.ks /var/www/html/Kickstart/default.ks.working
+</pre>
+</li>
+<li>Modify our Kickstart file by adding curl commands to the %post section. So that is looks like this..
+<pre class="code">
+cd /etc/yum.repos.d
+curl -O http://10.1.1.100/yum.repos.d/miniPatch.repo
+curl -O http://10.1.1.100/yum.repos.d/yodaBaseOS.repo
+curl -O http://10.1.1.100/yum.repos.d/yodaAppStream.repo
+</pre>
+</li>
+<h3>Don't forget /etc/hosts</h3>
+<p class="description">
+Our repo files refer to yoda by name not IP address.  We need an entry for yoda in the hosts file of every server we build.
+</p>
+<li>Modify default.ks so that every server built has an entry for yoda in /etc/hosts
+</li>
+<h3>Test our work </h3>
+<li>Build a new server from yoda </li>
+<li>Can we see the repos?
+<pre class="code">
+yum repolist
+</pre>
+</li>
+<li>The install only pulled from the BaseOS and AppStream repositories.  Meaning it needs to be patched! <em>Patching should update: curl, and sudo</em>
+<pre class="code">
+yum update
+</pre>
+</li>
+</ol>
+
+<hr> 
+<h2>Part D: I don't trust myself...  </h2>
+<p class="description">
+I don't trust myself to remember to run <span class=cmd>yum update</span> to patch the system every time I build. 
+Since we do not deploy unpatched systems, it makes sense to make patching part of the automated build.
+</p>
+<p class="description">
+We have a couple of choices.  We could add <span class=cmd>yum update -y</span> to the %post section of our Kickstart file.  Or we could take advantage of YUM's ability to automatically select the latest available version of any package.  This is the strategy we will use.
+</p>
+<ol>
+<li>Two repos are referenced in our Kickstart file.  Here's the line that tells the installer to also look in the AppStream repository.  Add a <span class=cmd>repo</span> command telling the installer to also look in <strong>miniPatch</strong>. 
+<pre class="code">
+repo --name="AppStream" --baseurl=http://10.1.1.100/83/AppStream
+</pre>
+</li>
+</ol>
+
+<hr>
+<h2>Part E: Custom file system layout</h2>
+<p class="description">
+We have used a custom partitioning scheme for all our servers.  We do this to isolate directories trees that are likely to grow.  We do this to avoid running out of space on the root file system.
+</p>
+<ol>
+<li>Increase the size of the /home file system from 200M to 400M in default.ks
+</li>
+</ol>
+
+
+<hr>
+<h2>Part F: Grading</h2>
+<ol>
+<li>Build a new server.  </li>
+<li>Set the hostname to s03 </li>
+<li>Configure a static IP address of: 10.1.1.30 </li>
+<li>Run the grading script, <a href="./grade_build.sh">grade_build.sh</a>, and submit the report to Canvas </li>
+</ol>
+
+
+</body>
+</html>

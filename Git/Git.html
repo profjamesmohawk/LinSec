@@ -1,0 +1,66 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<meta content="text/html; charset=UTF-8" http-equiv="content-type">
+  	<link rel="stylesheet" href="../jbl_labs.css"> 
+  	<title>
+		Lab: Intro To Git	</title>
+<script type="text/javascript">
+ 	function unhide(divID) {
+ 		var item = document.getElementById(divID);
+ 		if (item) {
+ 			item.className=(item.className=='hidden')?'unhidden':'hidden';
+ 		}
+	}
+
+ </script>
+  
+</head>
+
+<body>
+<h1>Lab: Intro To Git</h1>
+<h2>Introduction</h2>
+<p class="description">Today we will explore the leading version control software, Git. </p>
+
+<hr>
+<h2>Theory</h2>
+<p class="description">
+Here's and excellent <a href="https://youtu.be/2sjqTHE0zok" target="blank">video from MIT</a> covering Git.  The first 30 minutes should be more than enough to get started.
+</p>
+
+<p class="description">
+Developers use Git to track changes to software and to be able to 'roll back the clock' to view old versions of files.  Increasingly admins are using Git to track configuration files, particularly Ansible playbooks. 
+</p>
+<p class="description">
+Even admins who choose not to use Git to version their own files, will often have to use Git to install and update software.
+</p>
+<hr>
+
+<h2>Overview</h2>
+<p class="description">
+First we will experiment with Git to raise our confidence level.  Then we will do some real work with Git:
+</p>
+<ul>
+<li>create a Git archive for most of our configuration files, by tracking all files in <strong>/etc</strong> </li>
+<li>create our own centralized Git server to which all our systems can 'push' their <strong>/etc</strong> Git repositories </li>
+<li>use Git to clone this course's content from GitHub </li>
+</ul>
+
+<hr>
+<h2>Part A: Provision systems</h2>
+
+<hr>
+<h2>Part B: Practice</h2>
+
+<hr>
+<h2>Part C: Create a repository for /etc</h2>
+
+<hr>
+<h2>Part D: Configure our own Git server</h2>
+
+<hr>
+<h2>Part E: Use Git clone from GitHub</h2>
+
+
+</body>
+</html>

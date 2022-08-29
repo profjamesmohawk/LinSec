@@ -1,0 +1,160 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd"> <html>
+<head>
+	<meta content="text/html; charset=ISO-8859-1" http-equiv="content-type">
+  	<link rel="stylesheet" href="../jbl_labs.css"> 
+  	<title>
+		Network Isolation
+	</title>
+  
+</head>
+
+<body>
+<h1>Network Isolation</h1>
+<p class="description">
+It is common practice to segregate network traffic for performance and security. 
+</p>
+
+<hr>
+<h2>Overview:</h2>
+<p class="description"> 
+Your manager, Bullwinkle, hired renowned security experts Boris and Natasha to review Acme's network architecture. 
+</p>
+
+<h3>Boris and Natasha's Recommendations:</h3>
+<ul>
+<li>Isolate system builds on a build network used for nothing else.  <em>Immediately after install, the system has no patches and can be very vulnerable.</em></li>
+<li>Isolate systems management traffic on a management network separate from the production network.</li>
+<li>Allow no end-user workstation direct access to the management network.</li>
+<li>Allow no traffic to be routed between the management and production networks.</li>
+</ul>
+
+<h3>Acme's Network and Senior UNIX Teams came up with this design.  </h3>
+<p> <IMG src="./NetworkIsolation.png" alt=""> </p>
+
+<h3>Your Job:</h3>
+<p class="description">
+Your task is to configure r01 and build g01.  The network team would normally provision a Cisco Firewall for use as r01 but it seems that all the technicians in the network group ate bad sushi with Boris and Natasha, leaving no one to configure the firewall - Bullwinkle volunteerd you saying, "back when I was an administrator we built or own firewalls from UNIX boxes, my UNIX Admin team will handle it!"
+</p>
+
+<hr>
+<h2>Requirements:</h2>
+<ol>
+<h3><li>Configuration: yoda</li></h3>
+<ol type="a">
+	<li>Update the hosts file</li>
+	<li>Add a route blue via 10.1.1.1
+<pre class="code">
+connection modify enp0s3 ipv4.routes '10.1.1.0/24 10.2.1.1'
+</pre></li>
+</ol>
+
+<h3> <li>Configuration: r01</li> </h3>
+<ol>
+<li>Configure our static IP addresses </li>
+<li>Enable packet forwarding
+<ol type="a">
+<li>Create <strong>/etc/sysctl.d/90-override.conf</strong> containing
+<pre class="code">
+net.ipv4.ip_forward=1
+</pre>
+</li>
+<li>reboot r01
+</li>
+</ol>
+</li>
+<li>Disable the firewalld based firewall.  (We will replace this with a netfilter/nft firewall later.)
+<pre class="code">
+systemctl disable firewalld.service 
+systemctl stop firewalld.service 
+systemctl mask firewalld.service
+</pre>
+</li>
+<li>Update the hosts file </li>
+<li>Configure the nftables fire wall <a href="./nftables_config.html">Detailed nftables steps</a>
+	<ul>
+	<li>Allow ssh from blue to red</li>
+	<li>Allow http from blue to red (required for patching)</li>
+	<li>Allow pings both ways</li>
+	<li>Allow nothing else</li>
+	</ul>
+	</li>
+</ol>
+
+<h3> <li>Configuration: g01 (no firewall config)</li> </h3>
+<ol type="a">
+	<li>Add a route to red through 10.2.1.1
+<pre class="code">
+connection modify enp0s3 ipv4.routes '10.1.1.0/24 10.2.1.1'
+</pre>
+</li>
+
+	<li>Do not allow packet forwarding in the kernel (this is the default)</li>
+	<li>Create accounts for: alice, bob, and boris</li>
+	<li>Create a group named acmeadm with alice and bob as members </li>
+
+	<li>Configure ssshd (/etc/ssh/sshd_config)
+	<ul >
+	<li>Listen on 10.3.0.10</li>
+	<li>Do not allow root to log-on via ssh</li>
+	<li>Only alice and bob are allowed to log on via ssh - accomplish this by limiting ssh access to the group  <strong>acmeadm</strong></li>
+	</ul>
+	</li>
+</ol>
+<h3><li>General Requirements</li></h3>
+<ol type="a">
+	<li>All servers must be built on the red network</li>
+	<li>All servers must be configured to use the yum repositories from yoda exclusively. <em>We don't want anyone installing untested patches</em></li>
+	<li>All servers must be patched before they leave the red network.</li>
+	<li>Before modifying <strong>any</strong> file, create a backup copy with the extension <strong>.prev</strong> (Grades will be awarded for the existence of <strong>.prev</strong> files.)</li>
+<pre class="code">
+# Example: 
+# Before we edit /etc/ssh/sshd_config, we will create a backup copy
+cp /etc/ssh/ssd_config /etc/sshd_config.prev	
+</pre>
+</ol>
+
+<hr>
+<h2>Recommended Hosts File:</h2>
+<pre class="code">
+10.1.1.1	r01red
+10.2.1.1	r01blue
+10.3.1.10	g01 g01black
+10.2.1.10	g01blue
+10.1.1.100	yoda
+</pre>
+<hr>
+<h2>Recommended Test Plan:</h2>
+<table>
+<tr> <td><strong>Host</strong></td> <td><strong>Test</strong></td> <td><strong>Expected Result</strong></td> </tr>
+<tr> <td>yoda</td> <td>ping r01red</td> <td>success</td> </tr>
+<tr> <td>yoda</td> <td>ping r01blue</td> <td>success</td> </tr>
+<tr> <td>yoda</td> <td>ping g01blue</td> <td>success</td> </tr>
+<tr> <td>yoda</td> <td>ssh g01blue</td> <td>fail</td> </tr>
+
+<tr> <td>r01</td> <td>ssh g01blue</td> <td>fail</td> </tr>
+
+<tr> <td>g01</td> <td>ping yoda</td> <td>success</td> </tr>
+<tr> <td>g01</td> <td>ssh yoda</td> <td>success</td> </tr>
+<tr> <td>g01</td> <td>curl http://yoda/foo</td> <td>Error 404 (this means we can talk to httpd, only a web server answers 404)</td> </tr>
+
+<tr> <td>w01</td> <td>ssh root@g01</td> <td>fail</td> </tr>
+<tr> <td>w01</td> <td>ssh boris@g01</td> <td>fail</td> </tr>
+<tr> <td>w01</td> <td>ssh alice@g01</td> <td>success (g01)</td> </tr>
+
+</table>
+
+
+<hr>
+<h2>Save Your Work:</h2>
+<p class="description">
+From now on <strong>all</strong> the work we do must comply with Boris and Natasha's recommendations.  Save the VM's you created for r01 and g01, you will need them for the labs that follow.  Save an updated yoda too.
+</p>
+
+<hr>
+<h2>Grading:</h2>
+<p class="description">
+Run the grading script COMING_SOON on r01 and g01.
+</p>
+
+</body>
+</html>
