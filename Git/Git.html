@@ -48,19 +48,172 @@ First we will experiment with Git to raise our confidence level.  Then we will d
 
 <hr>
 <h2>Part A: Provision systems</h2>
+<p class="description">
+We will use the same set of nodes we used for the Ansible lab.  If you have not kept your VMs, we can use fresh systems.  We do not need any of the configuration changes from the Ansible lab.  We just need the servers.
+</p>
+<IMG src="./Git.png" alt="server block diagram">
 
 <hr>
 <h2>Part B: Practice</h2>
+<p class="description">
+Before we start using Git, we should practice a bit.  Two options are provided here.  The first option is for you to build your own test plan based on the excellent introductory tutorial from the Git team.  Option two is to follow the cookbook provided.
+</p>
+
+<h3>Option 1: Build your own tutorial</h3>
+<ul>
+<li>Use the official <a href="https://git-scm.com/docs/gittutorial/en">Git tutorial</a> to  devise and run some tests.  </li>
+</ul>
+
+<h3>Option 2: Ask your instructor nicely...</h3>
+<ul>
+<li> If you are having trouble deciding how to test Git on your own, ask your instructor to develop a plan with the class.  </li>
+</ul>
+
 
 <hr>
 <h2>Part C: Create a repository for /etc</h2>
+<p class="description">
+These are the detailed steps to place all of /etc in a Git repo.  
+</p>
+<ol>
+<li>As root on web01
+<ol type="a">
+<li>Create an empty repo
+<pre class="code">
+cd /etc
+git init
+</pre>
+</li>
+<li>Add all files in /etc to the staging area
+<pre class="code">
+git add .
+</pre>
+</li>
+<li>Commit the files from the staging area to the master branch
+<pre class="code">
+git commit -m "initial commit"
+</pre>
+</li>
+<li>Rename the master branch main
+<pre class="code">
+git branch -M main
+</pre>
+</li>
+</ol>
+</li>
+<li>Repeat these steps on web02 </li>
+</ol>
 
 <hr>
-<h2>Part D: Configure our own Git server</h2>
+<h2>Demonstrate the value of versioning /etc</h2>
+
+<ol>
+<li>logon to web01 as root </li>
+<li>add a new host to /etc/hosts
+<pre class="code">
+10.1.1.33	grogu
+</pre>
+</li>
+<li>use git to see what's changed in /etc since the last commit
+<pre class="code">
+git status
+</pre>
+</li>
+
+<li>use git diff to see how a specific file has changed
+<pre class="code">
+git diff /etc/hosts
+</pre>
+</li>
+
+<li>commit our change
+<pre class="code">
+git add /etc/hosts
+git commit -m "added grogu to hosts"
+</pre>
+</li>
+</ol>
 
 <hr>
-<h2>Part E: Use Git clone from GitHub</h2>
+<h2>Part E: Configure our own Git server</h2>
+<p class="description">
+Git can work with remote repositories very well.  <a href="https://www.github.com">GitHub</a> is the best known git server.  We will use GitHub shortly.  Now we will build our own Git server.  <strong>note:</strong> This is largely an ssh exercise.
+</p>
+<p class="description">
+Git uses ssh to access remote servers.  For this to work we need to set up key based authentication.  Our strategy will be to create a Linux user on cn01 for each of our managed systems (web01, web02)
+</p>
+<ol>
+<li>Set up accounts and keys: 
+<ol type="a">
+<li>create two users on cn01: web01git, web02git </li>
+<li>configure ssh such that root on web01 can logon to cn01 as web01git without typing a password.  </li>
+<li>configure ssh such that root on web02 can logon to cn01 as web02git without typing a password.  </li>
+</ol>
+</li>
+<li>Check our work...
+<ul>
+<li>logon to web01 as root </li>
+<li>run a command on cn01
+<pre class="code">
+ssh web01git@cn01 hostname
+</pre>
+</li>
+</ul>
+</li>
+<li>Setup remote Git repository for web01 (all commands run as root on web01)
+<ol type="a">
+<li>create directory to hold the repo
+<pre class="code">
+ssh web01git@cn01 mkdir ./etc.git
+</pre>
+</li>
+<li>initialize Git repo
+<pre class="code">
+ssh web01git@cn01  'cd ./etc.git; git init --bare'
+</pre>
+</li>
+<li>add the remote repository to web01
+<pre class="code">
+cd /etc
+git remote add origin web01git@cn01:./etc.git
+</pre>
+</li>
+<li>push our changes to cn01
+<pre class="code">
+git push origin main
+</pre>
+or
+<pre class="code">
+git push --set-upstream origin main
+</pre>
+</li>
+</ol>
+</li>
+<li>Setup remote GIT repository for web02
+</li>
+</ol>
 
+<hr>
+<h2>Part F: Use Git clone from GitHub</h2>
+<p class="description">
+The content for this course is stored on GitHub.  Let's get a local copy on w01.
+</p>
+<ol>
+<li> on w01, as alice...
+<pre class="code">
+mkdir ~/projects
+cd ~/projects
+git clone https://github.com/profjamesmohawk/LinSec.git
+</pre>
+</li>
+<li>check our work
+<pre class="code">
+firefox projects/LinSec/index.html
+</pre>
+</li>
+
+
+</ol>
 
 </body>
 </html>
