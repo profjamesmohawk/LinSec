@@ -80,8 +80,7 @@ Alice, our friend from the Admin course, has been promoted and now manages the u
 Yoda servers as a YUM/DNF server.  For our admin course we only needed a few packages.  Now we need more. We will format the disk Alice added and mount it at <strong>/var/www</strong> to make space for all those new packages.  Alice has added a disk, it shows as /dev/sdb
 </p>
 <ol>
-<li>Partition /dev/sdb with one primary  partition. </li>
-<li>Build an ext4 file system on /dev/sdb1 </li>
+<li>Build an ext4 file system on /dev/sdb1 (disk is already partitioned) </li>
 <li>Mount our new file system at /mnt <em>(do not add to fstab yet)</em>.  </li>
 <li>Copy the contents of the <em>old</em> /var/www/ to the <em>new</em> file system.  
 <pre class="code">
@@ -150,7 +149,7 @@ df /RHEL-8-3-0-BaseOS-x86_64/
 </li>
 <li>Install the DHCP server software
 <pre class="code">
-yum install dhcpd-server
+yum install dhcp-server
 </pre>
 </li>
 <li>Set the DHCP server to start on boot
@@ -160,7 +159,7 @@ systemctl enable dhcpd
 </li>
 <li>Start the DHCP server
 <pre class="code">
-systemctl enable dhcpd
+systemctl start dhcpd
 </pre>
 </li>
 <li>How did that go?
@@ -211,6 +210,11 @@ subnet 10.1.1.0 netmask 255.255.255.0 {
 }
 </pre>
 </li>
+<li>Restart DHCP server
+<pre class="code">
+systemctl start dhcpd
+</pre>
+</li>
 <li>Allow DHCP through the firewall
 <pre class="code">
 firewall-cmd --permanent --add-service=dhcp
@@ -238,12 +242,8 @@ firewall-cmd --reload
 </li>
 <li>Check your work: </li>
 <pre class="code">
-echo "hi" &gt; /var/lib/tftpboot/f1
-cd /tmp
-tftp localhost
-get f1
-quit
-cat f1
+echo "hi tftp works!" &gt; /var/lib/tftpboot/f1
+curl tftp://localhost/f1
 </pre>
 </ol>
 </p>
@@ -276,12 +276,12 @@ display boot.msg
 label linux
   menu label Install system
   menu default
-  kernel images/RHEL-8.1/vmlinuz
-  append initrd=images/RHEL-8.1/initrd.img ip=dhcp inst.repo=http://10.1.1.100/83 ks=http://10.1.1.100/Kickstart/default.ks inst.kdump_addon=off
+  kernel images/RHEL-8.3/vmlinuz
+  append initrd=images/RHEL-8.3/initrd.img ip=dhcp inst.repo=http://10.1.1.100/83 ks=http://10.1.1.100/Kickstart/default.ks inst.kdump_addon=off
 label rescue
   menu label Rescue installed system
-  kernel images/RHEL-8.1/vmlinuz
-  append initrd=images/RHEL-8.1/initrd.img rescue
+  kernel images/RHEL-8.3/vmlinuz
+  append initrd=images/RHEL-8.3/initrd.img rescue
 label local
   menu label Boot from local drive
   localboot 0xffff
@@ -290,9 +290,9 @@ label local
 
 <li>Put a copy of the install kernel and matching disk image where the client cat get it via tftp</li>
 <pre class="code">
-mkdir -p /var/lib/tftpboot/images/RHEL-8.1/
-cp /RHEL-8-3-0-BaseOS-x86_64/images/pxeboot/initrd.img /var/lib/tftpboot/pxelinux/images/RHEL-8.1/
-cp /RHEL-8-3-0-BaseOS-x86_64/images/pxeboot/vmlinuz /var/lib/tftpboot/pxelinux/images/RHEL-8.1/
+mkdir -p /var/lib/tftpboot/images/RHEL-8.3/
+cp /RHEL-8-3-0-BaseOS-x86_64/images/pxeboot/initrd.img /var/lib/tftpboot/images/RHEL-8.3/
+cp /RHEL-8-3-0-BaseOS-x86_64/images/pxeboot/vmlinuz /var/lib/tftpboot/images/RHEL-8.3/
 </ol>
 
 <hr>
@@ -326,10 +326,6 @@ url --url=http://10.1.1.100/83/BaseOS
 
 # include the AppStream repo from yoda too
 repo --name="AppStream" --baseurl=http://10.1.1.100/83/AppStream
-repo --name="miniPatch" --baseurl=http://10.1.1.100/miniPatch
-
-# log to syslog on yoda
-#logging --host=10.1.1.100 --level=debug --port=514
 
 %packages
 @minimal-environment
@@ -453,7 +449,7 @@ You may want to review the Kickstart documentation found in <em>Notes and Refere
 </ol>
 
 <hr>
-<h2>Part K: Making yoda Portable</h2>
+<h2>Part K: One take-out container please</h2>
 <p class="description">
 We will need yoda for all of our labs and test.  If you built yoda on a classroom computer, you will need to make sure that you copy the contents of the VirtualBox VM folder to you your external drive.  The folder you want is <strong>VirtualBox VMs/yoda(10.1.1.100)</strong>.  Double clicking on the <strong>yoda(10.1.1.100).vbox</strong> file contained in this folder should register the yoda VM with VirtualBox on any new host.
 </p>
