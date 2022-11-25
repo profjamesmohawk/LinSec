@@ -63,6 +63,7 @@ gpgcheck=1
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
 </pre>
 </li>
+<li>Repeat this process for the <strong>LocalAppStream.repo</strong> <em>(rename LocalAppStream.repo to yodaAppStream.repo, edit yodaAppStream.repo as required.)</em> </li>
 <li>Check our work. <em> <span class=cmd>yum list</span> should now show packages from the <strong>yodaBaseOS</strong> repo.</em>
 <pre class="code">
 yum clean all
@@ -78,7 +79,6 @@ Why do some repo names start with @?
 Can you decipher the meaning of the @anaconda repo?
 </em>
 </li>
-<li>Repeat this process for the <strong>LocalApp.repo</strong> </li>
 <li>Check our work. <em> We should  now see packages from <strong>yodaAppStream</strong></em>
 <pre class="code">
 yum clean all
@@ -89,10 +89,10 @@ yum list | tail -n +8 | awk '//{ print $3;}' | sort -u
 <hr>
 <h2>Part B: Patch yoda</h2>
 <p class="description">
-yoda hosts a patch repo, miniUpdate, but can not access it to patch itself.  We will fix that now.
+yoda hosts a patch repo, miniUpdate, but needs a .repo file in order to access it.  
 </p>
 <ol>
-<li>Use <span class=cmd>scp</span> to copy <strong>/etc/yum.repos.d/miniPatch.repo</strong> from w01 to yoda.  </li>
+<li>Use what you learned in Part A to create a repo file named <strong>miniPatch.repo</strong> that points to the miniPatch repository on yoda.</li>
 <li>Check our work.  <em>We should  now see packages from <strong>miniPatch</strong></em>
 <pre class="code">
 yum clean all
@@ -140,7 +140,7 @@ curl http://yoda/yum.repos.d/miniPatch.repo
 </li>
 <li>Demonstrate the <strong>-O</strong> curl flag
 <pre class="code">
-ls miniPatch.repo
+ls miniPatch.repo  # should result in No such file or directory
 curl -O http://yoda/yum.repos.d/miniPatch.repo
 cat miniPatch.repo
 </pre>

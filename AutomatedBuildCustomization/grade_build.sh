@@ -90,13 +90,13 @@ spit_start "Who am I?"
 hostname
 spit_end
 
-spit_start "/etc/fstab"
-cat /etc/fstab
+spit_start "/etc/hosts"
+cat /etc/hosts
 spit_end
 
 
 spit_start "df -h"
-df -h | grep -v tmpfs
+df -h | grep home
 spit_end
 
 spit_start "Was I patched?<br><em>7.61.1-18.el8 <br>from miniPatch</em>"
