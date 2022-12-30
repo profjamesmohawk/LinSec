@@ -1,0 +1,255 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<meta content="text/html; charset=ISO-8859-1" http-equiv="content-type">
+  	<link rel="stylesheet" href="../jbl_labs.css"> 
+  	<title>
+		Lab 03a - SELinux
+	</title>
+  
+</head>
+
+<body>
+<h1>Lab 03a - SELinux, The Bare Essentials</h1>
+<h2>Introduction</h2>
+<p class="description">
+SELinux is a complex beast that the average administrator will never fully understand or tame.  That said, it is a very important security tool that we need to learn to live with.  The good news is that all the heavy lifting of configuring the <strong>policy</strong> used to protect our system is done for us by the RedHat/CentOS teams.  All we need to do is learn how to live in harmony with this powerful guard dog.
+</p>
+<p class=description>
+In this lab we will learn how to recognize and remedy some of the most common headaches SELinux gives admins.  This lab will not make you and SELinux expert.  It should give you the skills to turn SELinux on without breaking into a cold sweat.
+</p>
+<p class=description>
+It is recommended that you review the <em>Security-Enhanced Linux Users Guide</em> found on the redhat documentation site. 
+</p>
+
+<hr>
+<h2>Prerequisites:</h2>
+<h3>Before you start this lab you must have:</h3>
+	<ul>
+		<li>A working build server (b01) from Lab 01</li>
+		<li>Nodes on which to install CentOS, <em>VirtualBox is the easiest way to meet this requirement</em></li>
+	</ul>
+
+<hr>
+<h2>Overview:</h2>
+<p class="description">We will use <strong>earth</strong> from previous lab.</p>
+<p> <IMG src="./SELinux.png" alt=""> </p>
+
+<hr>
+<h2>Part A: Configure earth</h2>
+<ul>
+<li>Apache installed and listening on port 80 (default configuration) </li>
+<li>Create a simple HTML page named <strong>/var/www/html/1.html</strong> containing any text you like.</li>
+<li>Create and publish a new site residing in <strong>/web</strong>
+<pre class=code>
+mkdir /web
+cp /var/www/html/1.html /web
+</pre>
+</li>
+<li>Make our new site visible.  We could modify the apache config, or we could use a symbolic link.  The symbolic link solution requires way less typing, so let's do that..
+<pre class=code>
+ln -s /web /var/www/html/web
+</pre>
+</li>
+</ul>
+
+<hr>
+<h2>Part C: Let's See SELinux do it's thing</h2>
+<p class=description>
+The main purpose of the SELinux <strong>targeted</strong> policy is to ensure that certain key system processes, like httpd, are only allowed to access resources, like files and ports, that are safe.  If an attacker takes control of the httpd daemon process, we do not want them to be able to look around the file system.  SELinux limits the access of httpd to files with specific SELinux <strong>types</strong>.  Let's see how that works..
+</p>
+
+<ol>
+<li>The page from the <strong>safe</strong> location should still be accessible...
+<pre class=code>
+curl http://localhost/1.html
+</pre>
+</li>
+<li>The page from the new <strong>unsafe</strong> location should not be accessible... (403 error expected)
+<pre class=code>
+curl http://localhost/web/1.html
+</pre>
+</li>
+<li>Seeing the 403 error, our first instinct to to check the file permissions.
+<pre class=code>
+ll -l /web
+ll -ld /web
+</pre>
+<em>That can't be the problem both are world readable.</em>
+</li>
+<li>Next we'd likely check the httpd error log.
+<pre class=code>
+tail /var/log/httpd/error_log
+</pre>
+it will show something like..
+<pre class=code>
+[Fri Dec 30 15:21:01.144450 2022] [core:error] [pid 1202:tid 140093408352000] (13)Permission denied: [client ::1:51638] AH00035: access to /web/1.html denied (filesystem path '/var/www/html/web/1.html') because search permissions are missing on a component of the path
+</pre>
+<em>As we expected httpd can't access <strong>/web</strong>, but we get no additional hint as to why.  This is where an admin unfamiliar with SELinux is likely to become perplexed.</em>
+</li>
+<li>We know a <strong>little</strong> about SELIUNX, so we look in <strong>/var/log/audit/audit.log</strong> for messages with a type of AVC
+<pre class=code>
+ grep AVC /var/log/audit/audit.log
+</pre>
+should show something like...
+<pre class=code>
+type=AVC msg=audit(1672431661.143:124): avc:  denied  { getattr } for  pid=1202 comm="httpd" path="/web/1.html" dev="dm-0" ino=87 scontext=system_u:system_r:httpd_t:s0 tcontext=unconfined_u:object_r:default_t:s0 tclass=file permissive=0
+</pre>
+This tells us that SELinux has intervened.  This <a target="blank" href="https://wiki.gentoo.org/wiki/SELinux/Tutorials/Where_to_find_SELinux_permission_denial_details">tutorial</a> will give a little more detail. <em>(<a href="./SELinux_find_perm.pdf" target=blank>Archived version</a>)</em>
+<br>In short...
+<table>
+<tr><td><strong>Field</strong></td><td><strong>Tells us</strong></td></tr>
+<tr>
+  <td>
+      comm="httpd"
+  </td>
+  <td>
+      Offending executable.
+  </td>
+</tr>
+<tr>
+  <td>
+      path="/web"
+  </td>
+  <td>
+      Resource that was denied
+  </td>
+</tr>
+<tr>
+  <td>
+      scontext=system_u:system_r:httpd_t:s0
+  </td>
+  <td>
+     The source context, or "who SELinux thinks is asking"
+  </td>
+</tr>
+<tr>
+  <td>
+      tcontext=system_u:object_r:default_t:s0
+  </td>
+  <td>
+      The target context, or "what SELinux thinks is being asked for"
+  </td>
+</tr>
+</table>
+</li>
+<li>The power of <strong>Z</strong>
+<br>The command line switch <strong>Z</strong> adds SELinux information to many commands.  Try these...
+<pre class=code>
+ls -lZ /var/www/html/1.html
+ps -eflZ |grep httpd
+id -Z
+</pre>
+</li>
+</ol>
+<hr>
+<h2>Part D: Make /web/ accessible to httpd using chcon</h2>
+<p class=description>
+A comparison of /web/1.html and /var/www/html/1.html will show us what needs to change.
+</p>
+
+Consider the results of these commands...
+<pre class=code>
+[root@tina ~]# ll -Z /var/www/html/1.html
+rw-r--r--. 1 root root unconfined_u:object_r:httpd_sys_content_t:s0 38 Dec 30 15:14 /var/www/html/1.html
+[root@tina ~]# ll -Z /web/1.html
+-rw-r--r--. 1 root root unconfined_u:object_r:default_t:s0 38 Dec 30 15:14 /web/1.html
+</pre>
+We can see that the only difference between these two files, from an SELinux viewpoint, is that they have different <strong>types</strong>.  If we could get /web/1.html to have the same type, <strong>httpd_sys_content_t</strong>, as /var/www/html/1.html, all would be good.
+We have two ways of changing this type.  One will survive a re-labeling, and one will not.  Either will survive a reboot.
+<ol>
+<li>For a quick fix that will not survive a re-labeling we can use the <strong>chcon</strong> command like this...
+<pre class=code>
+chcon -Rv -t httpd_sys_content_t /web
+</pre>
+</li>
+<li>Verify that this worked using curl </li>
+<li>Reboot earth </li>
+<li>Verify that we can still access /web/1.html curl </li>
+</ol>
+
+<hr>
+<h2>Part E: Make our type change more permanent</h2>
+<p class=description>
+You may recall that when we switched SELinux to enforcing mode it took a while for the system to boot.  This was because the mode change triggered a full file system relabeling.  The context of a file is stored in the file system as an extended attribute.  But it is the SELinux policy, targeted in our case, that defines what the context of any given file should be.  The targeted policy says that /web and everything below it shoud have a type of default_t.  If a full file system relabeling is triggered /web and all it's contents will revert to a type of default_t and no longer be accessible to httpd.  
+</p>
+<p class=description>
+If we want to make /web available to httpd on a truly permanent basis, we should modify the targeted policy telling it "/web should have a type of httpd_sys_content_t.
+</p>
+
+<ol>
+<li>Tell SELinux to restore the context of /web and it's contents to it's default value.
+<pre class=code>
+restorecon -Rv /web
+</pre>
+</li>
+<li>Use curl to verify that /web/1.html is no longer readable by httpd 
+<pre class=code>
+curl http://localhost/web/1.html
+</pre>
+</li>
+<li>We will use the <strong>semanage</strong> command to modify the targeted policy, but first we need to install <strong>semanage</strong>
+<pre class=code>
+yum install policycoreutils-python-utils
+</pre>
+</li>
+<li>Modify the targeted policy
+<pre class=code>
+semanage fcontext -a -t httpd_sys_content_t "/web(/.*)?"
+</pre>
+</li>
+<li>Tell SELinux to restore the context of /web and it's contents to it's new default value.
+<pre class=code>
+restorecon -Rv /web
+</pre>
+</li>
+<li>Check our work (curl should succeed)
+<pre class=code>
+curl http://localhost/web/1.html
+</pre>
+</li>
+</ol>
+
+<hr>
+<h2>Part F: Allow httpd to listen on a non-standard port</h2>
+<p class=description>
+SELinux can restrict access to ports just like it restricts access to files. In this section we will make earth listen on port 9317.
+</p>
+<ol>
+<li>Start by checking which ports httpd is allowed to listen on by default.
+<pre class=code>
+semanage port -l|grep http
+</pre>
+</li>
+<li>Since port 9317 is not listed, we expect that httpd will no be allowed access it. Let's verify that.
+<ul>
+<li>Edit <strong>/etc/httpd/conf/httpd.conf</strong> and change the Listen port from 80 to 9317
+<pre class=code>
+Listen 9317
+</pre>
+</li>
+<li>Restart the httpd service - you should see an error </li>
+<li>Check for a corresponding SELinux error in <strong>/var/log/audit/audit.log</strong> </li>
+</ul>
+<li>Use <strong>semanage</strong> to allow httpd to access TCP port 9317
+<pre class=code>
+semanage port -a -t http_port_t -p tcp 9317
+</pre>
+</li>
+</li>
+<li>Start httpd </li>
+<li>Check our work
+<pre class=code>
+curl http://localhost:9317/1.html
+</pre>
+</li>
+</ol>
+
+<hr>
+<h2>Part G: Grading</h2>
+<ul type="none">
+<li>Run the <a href="./host_info_selinux.zip">host info script</a> and submit the report to Canavs.
+</li>
+</ul>
+</body>
+</html>
