@@ -80,8 +80,8 @@ Alice, our friend from the Admin course, has been promoted and now manages the u
 Yoda servers as a YUM/DNF server.  For our admin course we only needed a few packages.  Now we need more. We will format the disk Alice added and mount it at <strong>/var/www</strong> to make space for all those new packages.  Alice has added a disk, it shows as /dev/sdb
 </p>
 <ol>
-<li>Build an ext4 file system on /dev/sdb1 (disk is already partitioned) </li>
-<li>Mount our new file system at /mnt <em>(do not add to fstab yet)</em>.  </li>
+<li>Build an ext4 file system on <strong>/dev/sdb1</strong> (disk is already partitioned) </li>
+<li>Mount our new file system at <strong>/mnt </strong><em>(do not add to fstab yet)</em>.  </li>
 <li>Copy the contents of the <em>old</em> /var/www/ to the <em>new</em> file system.  
 <pre class="code">
 cp -a /var/www/* /mnt
