@@ -44,12 +44,7 @@ Relax and take a deep breath, it's time to dive back into Linux.  This lab will 
 <li><a href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/performing_an_advanced_rhel_installation/kickstart-commands-and-options-reference_installing-rhel-as-an-experienced-user">Kickstart Commands (from RH)</a>
 <li><a href="https://pykickstart.readthedocs.io/en/latest/kickstart-docs.html">Kickstart File Documentation</a> </li>
 </li>
-</ul> <hr>
-<h2>Grading:</h2>
-<br>
-<p class="description">
-Demonstrate your working build server to your instructor.
-</p>
+</ul> 
 
 <hr>
 <h2>Overview:</h2>
@@ -453,6 +448,7 @@ You may want to review the Kickstart documentation found in <em>Notes and Refere
 <li>Build a new server to test your work</li>
 </ol>
 
+
 <h3>Optional activity (Advanced study)</h3>
 <ol>
 <li>Modify the remote installation infrastructure such that a new server can be assigned a specific Kickstart file based on it's Ethernet address.  <br>Note: Before <strong>pxelinux.cfg/default </strong> is loaded, pxelinux looks for a file like <strong>pxelinux.cfg/01-08-00-27-c5-e0-f3</strong> where <strong>01-08-00-27-c5-e0-f3</strong> is the Ethernet address of the client.</li>
@@ -461,7 +457,15 @@ You may want to review the Kickstart documentation found in <em>Notes and Refere
 </ol>
 
 <hr>
-<h2>Part K: One take-out container please</h2>
+<h2>Part K: Grading</h2>
+<ul>
+<li>Run the grading script, <a href="./host_info_1.zip">host_info_1.zip</a> on a freshly built server and submit the report to Canvas.
+</li>
+</ul>
+
+
+<hr>
+<h2>Part L: One take-out container please</h2>
 <p class="description">
 We will need yoda for all of our labs and test.  If you built yoda on a classroom computer, you will need to make sure that you copy the contents of the VirtualBox VM folder to you your external drive.  The folder you want is <strong>VirtualBox VMs/yoda(10.1.1.100)</strong>.  Double clicking on the <strong>yoda(10.1.1.100).vbox</strong> file contained in this folder should register the yoda VM with VirtualBox on any new host.
 </p>
