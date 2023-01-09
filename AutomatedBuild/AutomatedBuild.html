@@ -134,6 +134,11 @@ mkdir /var/www/html/83
 cp -a /RHEL-8-3-0-BaseOS-x86_64/* /var/www/html/83
 </pre>
 </li>
+<li>Set the SELinux context for the files we just moved around
+<pre class="code">
+restorecon -R /var/www
+</pre>
+</li>
 </ol>
 
 <hr>
