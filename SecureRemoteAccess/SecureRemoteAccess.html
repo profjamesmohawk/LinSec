@@ -108,16 +108,15 @@ ln -s lab_03 0A0101D4
 
 </pre>
 
-<li>Customize the new pxelinux config file we just created, <strong>lab_03</strong>, to point to a new Kickstart file. <em>(key fragment)</em> </li>
+<li>Customize the new pxelinux config file we just created, <strong>lab_03</strong>, to point to a new Kickstart file. <strong>hint:</strong> change default.ks to lab_03.ks</em> so that the default boot option looks like this... </li>
 <pre class="code">
 label linux
   menu label Install system
   menu default
-  kernel images/RHEL-8.1/vmlinuz
-  append initrd=images/RHEL-8.1/initrd.img ip=dhcp inst.repo=http://10.1.1.100/83 ks=http://10.1.1.100/Kickstart/lab_03.ks inst.kdump_addon=off
-
+  kernel images/RHEL-8.3/vmlinuz
+  append initrd=images/RHEL-8.3/initrd.img ip=dhcp inst.repo=http://10.1.1.100/83 ks=http://10.1.1.100/Kickstart/lab_03.ks inst.kdump_addon=off
 </pre>
-<li>Create <strong>/var/www/html/Kickstart/lab_03.ks</strong> based on <strong>/var/www/html/Kickstart/default.ks</strong> with consideration to blocks like this:</li>
+<li>Create <strong>/var/www/html/Kickstart/lab_03.ks</strong> based on <strong>/var/www/html/Kickstart/default.ks</strong> with consideration to lines like this:</li>
 <pre class="code">
 
 # set the firewall to allow only ssh
@@ -126,7 +125,7 @@ firewall --enabled --ssh
 # add a user named alice
 user --name=alice --groups=wheel --password=userpass
 
-# hosts
+# hosts (goes in %post section)
 echo "10.1.1.100 yoda" &gt;&gt;/etc/hosts
 </pre>
 <li>Build earth, wind, and fire </li>
@@ -162,7 +161,7 @@ A very common mode of attack is the so called 'man in the middle' attack. In a m
 <li>Change fire's IP address to 10.1.1.210 </li>
 <li>ssh from wind to earth as alice, <strong><em>pay careful attention to any messages you see</em></strong></li>
 <h3>Put things back the way you found them</h3>
-<li>Return fire's IP address to 10.1.1.12</li>
+<li>Return fire's IP address to 10.1.1.212</li>
 <li>Plug earth's network cable back in</li>
 
 </ol>
