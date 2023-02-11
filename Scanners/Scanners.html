@@ -70,19 +70,7 @@ Paranoid admin that you are, you decide to install an IDS on at least some of yo
 Your basic plan is:
 </p>
 <ol>
-<li>Build a test server using the standard Acme configuration: </li>
-	<ol type="a">
-		<li>hostname: kenobi</li>
-		<li>ip address: 10.1.1.32</li>
-		<li>standard Acme build</li>
-	</ol>
-<li>Build a server to host NMAP and Nessus</li>
-	<ol type="a">
-		<li>hostname: sherlock</li>
-		<li>ip address: 10.1.1.31</li>
-		<li>standard Acme build</li>
-		<li><strong>16GB disk </strong> </li>
-	</ol>
+<li>Use Kickstart to build our test servers: kenobi and sherlock. </li>
 <li>Run test scans against yoda and kenobi to become familiar with NMAP</li>
 <li>Build a simple IDS and test it using trojan horse programs supplied by your instructor</li>
 <li>Write a report detailing your findings</li>
@@ -171,7 +159,7 @@ nmap -n -v -O --osscan-guess 10.1.1.232
 <h3>Scan with the firewall up</h3>
 <li>Log on to kenobi and enable the local firewall</li>
 <pre class="code">
-service iptables start
+systemctl start firewalld 
 </pre>
 <li>Run the simplest possible NMAP scan against kenobi </li>
 <pre class="code">
@@ -225,7 +213,9 @@ Freddy, the sushi loving Windows Administrator who sits down the hall, overheard
 We really should have a look at Nessus.  Nessus is available as a trial.  A valid email address is required to register for the trial, use your Mohawk email.
 </p>
 <p class="description">
+<em>
 Installing and running Nessus is an interesting exercise, but not a core component of this course.  Installing and configuring Nessus is optional.  You can answer the lab questions based on the sample Nessus report below.
+</em>
 </p>
 <ul>
 	<li>Optional Steps:
@@ -251,7 +241,7 @@ To build a simple IDS we need to have strong skills with 3 commands: find; md5su
 </p>
 <ol>
 <h3>The find command</h3>
-<li>Open a putty session on your Windows workstation and ssh to kenobi as root</li>
+<li>Open an ssh  session on kenobi as root</li>
 <li>Write a find command to find all files that contain the string <strong>rc</strong> anywhere in their name
 <br>Hints:
 <ul>
@@ -356,7 +346,7 @@ Answer these questions and submit them to Canvas.
 </p>
 <ol>
 <h3>Port scanner </h3>
-<li>Submit a copy of your e-mail to Rocky from Part D.
+<li>Write a short evaluation of Nessus comparing it to nmap.  One paragraph will do.
 
 <h3>IDS questions </h3>
 <li>What back-doors where left by trojan_a?</li>
