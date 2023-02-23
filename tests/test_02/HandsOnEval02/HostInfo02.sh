@@ -67,6 +67,7 @@ fi
 echo "This script will collect interesting data from your system" >&2
 echo "The results will be placed in $OUT_FILE, feel free to have a look." >&2
 echo "The best way to view it is a full browser, but lynx will do in a pinch." >&2
+echo "Be patient, it could take a few minutes to run." >&2
 
 
 #
@@ -75,12 +76,14 @@ echo "The best way to view it is a full browser, but lynx will do in a pinch." >
 #
 spit_pre
 
-spit_title "Test 01 Report"
+spit_title "COMP-10032 Host Info Report - Hands On Evaluation 2"
 
+spit_start Hostname
+hostname
+spit_end
 
-spit_section_header "Work must be done on test day."
 spit_start "When was I built?"
-ls -l /var/log/anaconda.log
+ls -l /var/log/anaconda/anaconda.log
 spit_end
 
 spit_start "When is now?"
@@ -88,34 +91,32 @@ date
 spit_end
 
 
-spit_section_header "Part A: Build and patch web01 (3 points)"
-
-spit_start Hostname
-hostname
+spit_start "Was I patched?<br><em>7.61.1-18.el8 <br>from miniPatch</em>"
+yum list curl | grep curl
 spit_end
 
-spit_start "IP Address configured with network manager"
-nmcli connection show enp0s3 | grep -e ipv4.method -e ipv4.addresses
-spit_end
-
-spit_start "Hosts file"
-grep -e web01 -e yoda /etc/hosts
-spit_end
-
-spit_section_header "Part B: Apache (2 points)"
-spit_start "New default page contains <strong>Welcome to web01</strong>"
-curl http://web01/ | grep -e Welcome -e web01
-spit_end
-
-spit_section_header "Part C: Kickstart file (2 points)"
-echo "coming soon"
-spit_end
-
-spit_section_header "Part D: bash added to miniPatch(3 points)"
-yum list bash
+spit_start "Check Network, httpd, hostname, and hosts all at once"
+curl http://$(hostname)/ | wc -l
 spit_end
 
 
-spit_section_header "Complete Kickstart file from which I was built (for reference only)"
-cat /root/anaconda-ks.cfg
-spot_post
+
+spit_start "Bullwinkle's account"
+id bullwinkle
+
+echo ""
+grep bullwinkle /etc/shadow | base64
+spit_end
+
+spit_start "SSH Keys"
+echo Alice:
+cat ~alice/.ssh/authorized_keys  | sed -e 's/.*==//'
+echo
+echo Rocky:
+cat ~rocky/.ssh/authorized_keys  | sed -e 's/.*==//'
+spit_end
+
+spit_start "trojan_c Analysis"
+cat /tmp/answers.txt
+spit_end
+

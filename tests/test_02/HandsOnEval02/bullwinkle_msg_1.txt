@@ -1,0 +1,14 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+Please create a user ID for me with:
+
+	UID:bullwinkle
+	PASSWD:smartboss
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.5 (GNU/Linux)
+
+iD8DBQFPeSL8tfajp63FT20RAqv1AJ9IBsNQEPKW/RtzApmxYsnYNeVjMwCdErhk
++eULvO0hW4lNoN1ifunvuQo=
+=A830
+-----END PGP SIGNATURE-----
