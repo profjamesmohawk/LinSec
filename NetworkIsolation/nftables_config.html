@@ -115,7 +115,7 @@ table inet my_inet_table {
 
 <li>Check our work: 
 <ol type="a">
-<li>ssh from w01 to r01blue </li>
+<li>ssh from yoda to r01red </li>
 <li>Look for the matching log message:
 <pre class="code">
 grep IN= /var/log/messages
@@ -146,10 +146,10 @@ Use the input interface <strong>(iif)</strong> match in rule to allow all local 
         }
 </pre>
 </li>
-<li>Check our work.  wget should now return 'connection refused' indicating that the packet was delivered but no process is listening on port 80.
+<li>Check our work.  curl should now return 'connection refused' indicating that the packet was delivered but no process is listening on port 80.
 <pre class="code">
 # on r01 try... 
-wget http://localhost
+curl http://localhost
 </pre>
 </li>
 
@@ -218,7 +218,7 @@ wget http://localhost
 <br>This chain will only allow ICMP across the router.
 <pre class="code">
         chain forward {
-                type filter hook forward priority 0; plolicy drop;
+                type filter hook forward priority 0; policy drop;
 
                 # accept all icmp packets (v4 and v6)
                 ip protocol icmp accept
