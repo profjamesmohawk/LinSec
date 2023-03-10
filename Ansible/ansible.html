@@ -192,7 +192,7 @@ cat &gt; ~/ansible/posix_requirements.yml &lt;&lt;EOF
 ---
 
 collections:
-    - name: ../ansible-posix-1.4.0.tar.gz
+    - name: ../ansible-posix-1.5.1.tar.gz
       type: file
 EOF
 </pre>
@@ -213,6 +213,7 @@ ansible-playbook  web_config.yml
 </li>
 <li>Check our work... (http should be open)
 <pre class="code">
+ssh web01 firewall-cmd --reload
 ssh web01 firewall-cmd --list-all
 </pre>
 </li>
