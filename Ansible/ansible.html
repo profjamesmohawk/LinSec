@@ -71,7 +71,12 @@ Ansible uses ssh to communicate between the control node and the managed nodes. 
 </p>
 <ol>
 <li>Create a key pair for root on cn01 </li>
-<li>Distribute the public key to /root/.ssh/authorized_keys on web01 and web02
+<li>Distribute the public key to /root/.ssh/authorized_keys on web01 and web02 </li>
+<li>Verify that our keys are good and accept the ssh fingerprints
+<pre class="code">
+ssh web01 hostname
+ssh web02 hostname
+</pre>
 </li>
 </ol>
 
@@ -165,6 +170,7 @@ ansible-playbook  web_config.yml
      ansible.posix.firewalld:
        service: http
        permanent: yes
+       immediate: yes
        state: enabled
 </pre>
 </li>
@@ -266,7 +272,7 @@ curl http://web01/
 Create a second play book named <span class=cmd>home_page.yml</span> containing the task(s) required to get publish a simple homepage on our web servers.
 </p>
 <ol>
-<li>Create a simple home page of your own design.  </li>
+<li>Create a simple home page of your own design <em>(index.html)</em>.  </li>
 <li>Use the Ansible built in module <strong>copy</strong> to publish your home page on web01 and web02 (<a href="https://docs.ansible.com/ansible/latest/collections/ansible/builtin/copy_module.html#ansible-collections-ansible-builtin-copy-module">copy module docs)</a> </li>
 </ol>
 

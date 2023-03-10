@@ -52,7 +52,19 @@ First we will experiment with Git to raise our confidence level.  Then we will d
 We will use the same set of nodes we used for the Ansible lab.  If you have not kept your VMs, we can use fresh systems.  We do not need any of the configuration changes from the Ansible lab.  We just need the servers.
 </p>
 <IMG src="./Git.png" alt="server block diagram">
-
+<ol>
+<li>Install git on web01 (cn01 does not need git installed)
+<pre class="code">
+yum install git
+</pre>
+</li>
+<li>Tell git who we are (run on web01)
+<pre class="code">
+git config --global user.name "Your Name Comes Here"
+git config --global user.email you@example.com
+</pre>
+</li>
+</ol>
 <hr>
 <h2>Part B: Practice</h2>
 <p class="description">
@@ -64,10 +76,7 @@ Before we start using Git, we should practice a bit.  Two options are provided h
 <li>Use the official <a href="https://git-scm.com/docs/gittutorial/en">Git tutorial</a> to  devise and run some tests.  </li>
 </ul>
 
-<h3>Option 2: Ask your instructor nicely...</h3>
-<ul>
-<li> If you are having trouble deciding how to test Git on your own, ask your instructor to develop a plan with the class.  </li>
-</ul>
+<h3>Option 2: Keep going with this lab...</h3>
 
 
 <hr>
@@ -101,7 +110,6 @@ git branch -M main
 </li>
 </ol>
 </li>
-<li>Repeat these steps on web02 </li>
 </ol>
 
 <hr>
@@ -137,17 +145,16 @@ git commit -m "added grogu to hosts"
 <hr>
 <h2>Part E: Configure our own Git server</h2>
 <p class="description">
-Git can work with remote repositories very well.  <a href="https://www.github.com">GitHub</a> is the best known git server.  We will use GitHub shortly.  Now we will build our own Git server.  <strong>note:</strong> This is largely an ssh exercise.
+Git can work with remote repositories very well.  <a href="https://www.github.com">GitHub</a> is the best known git server, and is owned by Microsoft.  We will use GitHub shortly.  Now we will build our own Git server.  <strong>note:</strong> This is largely an ssh exercise.
 </p>
 <p class="description">
-Git uses ssh to access remote servers.  For this to work we need to set up key based authentication.  Our strategy will be to create a Linux user on cn01 for each of our managed systems (web01, web02)
+Git uses ssh to access remote servers.  For this to work smoothly we need to set up key based authentication.  Our strategy will be to create a Linux user on cn01 for each of our managed systems (web01)
 </p>
 <ol>
-<li>Set up accounts and keys: 
+<li>Set up account and keys: 
 <ol type="a">
-<li>create two users on cn01: web01git, web02git </li>
+<li>create a user on cn01: web01git </li>
 <li>configure ssh such that root on web01 can logon to cn01 as web01git without typing a password.  </li>
-<li>configure ssh such that root on web02 can logon to cn01 as web02git without typing a password.  </li>
 </ol>
 </li>
 <li>Check our work...
@@ -189,8 +196,6 @@ git push --set-upstream origin main
 </li>
 </ol>
 </li>
-<li>Setup remote GIT repository for web02
-</li>
 </ol>
 
 <hr>
@@ -208,10 +213,17 @@ git clone https://github.com/profjamesmohawk/LinSec.git
 </li>
 <li>check our work
 <pre class="code">
-firefox projects/LinSec/index.html
+firefox LinSec/index.html
 </pre>
 </li>
+</ol>
 
+<hr>
+<h2>Part H: Grading</h2>
+<ul>
+<li>Run the grading script, <a href="./host_info_git.sh">host_info_git.sh</a> on web01 and submit the report to Canvas.
+</li>
+</ul>
 
 </ol>
 
