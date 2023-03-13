@@ -11,57 +11,52 @@
 <body>
 <h1>Network Isolation</h1>
 <p class="description">
-It is common practice to segregate network traffic for performance and security. 
+Not all servers are equally secure or equally trusted.  Today we will us a transparent proxy to isolate a system we don't quite trust.
+</p>
+<p class="description">
+Rocky found a cool old internet connected coffee maker at the thrift store.  We would really love to put it on our network, but there are some problems we need to address.
+</p>
+
+<p class="description">
+Here's what we know about the coffee maker:
+<ul>
+<li>It web interface accessible via port 80 </li>
+<li>The OS it runs is old and has know vulnerabilities </li>
+<li>It has an LCD that shows its' IP address as 15.35.79.233  <em>looks like it was in an HP office last</em> </li>
+<li>The admin password is nowhere to be found.  </li>
+<li>A VirtualBox appliance simulating the coffee maker can be found on Canvas (icm01.ova) </li>
+</ul>
 </p>
 
 <hr>
-<h2>Overview:</h2>
+<h2>Strategy:</h2>
 <p class="description"> 
-Your manager, Bullwinkle, hired renowned security experts Boris and Natasha to review Acme's network architecture. 
+We will use a transparent proxy to expose only port 80 on our blue network.
 </p>
-
-<h3>Boris and Natasha's Recommendations:</h3>
-<ul>
-<li>Isolate system builds on a build network used for nothing else.  <em>Immediately after install, the system has no patches and can be very vulnerable.</em></li>
-<li>Isolate systems management traffic on a management network separate from the production network.</li>
-<li>Allow no end-user workstation direct access to the management network.</li>
-<li>Allow no traffic to be routed between the management and production networks.</li>
-</ul>
-
-<h3>Acme's Network and Senior UNIX Teams came up with this design.  </h3>
 <p> <IMG src="./NetworkIsolation.png" alt=""> </p>
 
-<h3>Your Job:</h3>
-<p class="description">
-Your task is to configure r01 and build g01.  The network team would normally provision a Cisco Firewall for use as r01 but it seems that all the technicians in the network group ate bad sushi with Boris and Natasha, leaving no one to configure the firewall - Bullwinkle volunteerd you saying, "back when I was an administrator we built or own firewalls from UNIX boxes, my UNIX Admin team will handle it!"
-</p>
-
 <hr>
-<h2>Requirements:</h2>
-<ol>
-<h3><li>Configuration: yoda</li></h3>
-<ol type="a">
-	<li>Update the hosts file</li>
-	<li>Add a route blue via 10.1.1.1
-<pre class="code">
-nmcli connection modify enp0s3 ipv4.routes '10.2.1.0/24 10.1.1.1'
-</pre></li>
-</ol>
-
-<h3> <li>Configuration: r01</li> </h3>
+<h2>Part A: Build and deploy proxy01</h2>
 <ol>
 <li>Configure our static IP addresses </li>
-<li>Enable packet forwarding
-<ol type="a">
-<li>Create <strong>/etc/sysctl.d/90-override.conf</strong> containing
+</ol>
+<h3>Check our work</h3>
+<ol>
+<li>ssh to proxy01 from w01 </li>
+<li>access the web application running on icm01
 <pre class="code">
-net.ipv4.ip_forward=1
+curl http://15.35.79.233
 </pre>
 </li>
-<li>reboot r01
-</li>
 </ol>
-</li>
+
+<hr>
+<h2>Part B: Switch from firewalld to nftables</h2>
+<p class="description">
+Our current configuration is usable but awkward.  Users must log on to prox01 to access icm01.  It would be much more convenient if we could access icm01 directly from any node on blue. 
+</p>
+
+<ol>
 <li>Disable the firewalld based firewall.  (We will replace this with a netfilter/nft firewall later.)
 <pre class="code">
 systemctl disable firewalld.service 
@@ -69,60 +64,248 @@ systemctl stop firewalld.service
 systemctl mask firewalld.service
 </pre>
 </li>
-<li>Update the hosts file </li>
-<li>Configure the nftables fire wall <a href="./nftables_config.html">Detailed nftables steps</a>
-	<ul>
-	<li>Allow ssh from blue to red</li>
-	<li>Allow http from blue to red (required for patching)</li>
-	<li>Allow pings both ways</li>
-	<li>Allow nothing else</li>
-	</ul>
-	</li>
+
+<li>Enable packet forwarding (required for NAT)
+<ol type="a">
+<li>Create <strong>/etc/sysctl.d/90-override.conf</strong> containing
+<pre class="code">
+net.ipv4.ip_forward=1
+</pre>
+</li>
+<li>reboot proxy01 </li>
+</ol>
+</li>
+
+<li>Create an empty rule set with one table, my_inet_table, belonging to the inet family.
+<pre class="code">
+cat &gt; /etc/sysconfig/nftables.conf &lt;&lt;EOF
+table inet my_inet_table {
+
+}
+EOF
+</pre>
+</li>
+<li>Start and enable the nftables service
+<pre class="code">
+systemctl enable nftables.service
+systemctl start nftables.service
+</pre>
+</li>
+<li>List the configured tables (there should be one inet table named my_inet_table)
+<pre class="code">
+nft list tables
+</pre>
+</li>
+<li>List the chains and rules from our table (family=inet, name=my_inet_table).  There should be no chains.
+<pre class="code">
+nft list table inet my_inet_table
+</pre>
+</li>
 </ol>
 
-<h3> <li>Configuration: g01 (no firewall config)</li> </h3>
-<ol type="a">
-	<li>Add a route to red through 10.2.1.1
+<hr>
+<h2>Part C: Build our firewall input rules</h2>
+<p class="description">
+Remember to run <span class=cmd>systemctl reload nftables.service</span> to reload the rules after edits.
+</p>
+<p class="description">
+These rules will apply only to packets destined for proxy01.  Packets that are being routed through proxy01 are not subject to these rules.
+</p>
+<p class="description">
+<strong>Note:</strong> Check our work after each step by trying 'something that should work' and 'something that should not work' after each change.
+</p>
+<ol>
+<li>Add chain connected to the input hook. Set the default policy on our input chain to <strong>drop</strong> by making /etc/sysconfig/nftables.conf look like..
 <pre class="code">
-nmcli connection modify enp0s3 ipv4.routes '10.1.1.0/24 10.2.1.1'
+table inet my_inet_table {
+
+        chain input {
+                # declare new chain named filter hooked to the input entry point and set default policy to drop
+                type filter hook input priority 0; policy drop
+        }
+}
+</pre>
+</li>
+<li>Reload with systemctl reload nftables.service <em>(this will break ssh sessions)</em></li>
+<li>Add a simple rule to allow ssh
+<pre class="code">
+	chain input {
+		type filter hook input priority 0; policy drop;
+
+		# allow ssh 
+		tcp dport ssh accept
+	}
 </pre>
 </li>
 
-	<li>Do not allow packet forwarding in the kernel (this is the default)</li>
-</ol>
-
-</ol>
-
-<hr>
-<h2>Recommended Hosts File:</h2>
+<li>Make our rule stateful.  As configured, we will accept <strong>every</strong> packet with a destination port of 22.  This could leave us open to attacks that start a TCP conversation 'in the middle'.  To increase our security we modify our ssh rule to allow only <strong>new</strong> connections on port 22.  All following packets will be covered by the <em>established/related</em> rule.
 <pre class="code">
-10.1.1.1	r01red
-10.2.1.1	r01blue
-10.3.1.10	g01 g01black
-10.2.1.10	g01blue
-10.1.1.100	yoda
+        chain input {
+                type filter hook input priority 0; policy drop
+
+                ct state established,related accept
+
+                # allow new tcp connections to port 22 (ssh)
+                tcp dport ssh ct state new accept
+        }
 </pre>
+</li>
+
+
+<li>Let proxy01 talk to itself.  Many programs communicate between components via local ip connections.  Our firewall won't allow that.
+To demonstrate this, we will use curl to connect to localhost:80.  The firewall is configured to drop packets, so our curl command will hang.
+<pre class="code">
+curl http://localhost
+</pre>
+</li>
+
+<li>
+Use the input interface <strong>(iif)</strong> match in rule to allow all local connections
+<pre class="code">
+        chain input {
+                type filter hook input priority 0; policy drop
+
+                ct state established,related accept
+
+                tcp dport ssh ct state new accept
+
+                # allow any packet if it is being sent to the look back interface
+                iif lo accept
+        }
+</pre>
+</li>
+<li>Check our work.  curl should now return 'connection refused' indicating that the packet was delivered but no process is listening on port 80.
+<pre class="code">
+# on proxy01 try... 
+curl http://localhost
+</pre>
+</li>
+
+<li>We can use interface matching in conjunction with port matching to accept only packets that came in on a given interface.  We will add an <strong>iif</strong> match to our ssh chain so that only hosts on blue can ssh to proxy01. (recall the blue network is connected to the <strong>enp0s3</strong> interface.
+<pre class="code">
+        chain input {
+                type filter hook input priority 0; policy drop
+
+                ct state established,related accept
+
+                # allow new ssh packets that came in on enp0s3 (blue)
+                iif enp0s3 tcp dport ssh ct state new accept
+
+                iif lo accept
+        }
+</pre>
+</li>
+<li>ICMP traffic can be a security risk but we will allow it as this is an internal firewall.
+<pre class="code">
+        chain input {
+                type filter hook input priority 0; policy drop
+
+                ct state established,related accept
+
+                # allow new ssh packets that came in on enp0s3 (blue)
+                iif enp0s3 tcp dport ssh ct state new accept
+
+                # allow any packet if it is being sent to the look back interface
+                iif lo accept
+
+                # accept all icmp packets (v4 and v6)
+                ip protocol icmp accept
+                ip6 nexthdr icmpv6 accept
+        }
+</pre>
+</li>
+</ol>
+
 <hr>
-<h2>Recommended Test Plan:</h2>
-<table>
-<tr> <td><strong>Host</strong></td> <td><strong>Test</strong></td> <td><strong>Expected Result</strong></td> </tr>
-<tr> <td>yoda</td> <td>ping r01red</td> <td>success</td> </tr>
-<tr> <td>yoda</td> <td>ping r01blue</td> <td>success</td> </tr>
-<tr> <td>yoda</td> <td>ping g01blue</td> <td>success</td> </tr>
-<tr> <td>yoda</td> <td>ssh r01red</td> <td>fail</td> </tr>
-
-<tr> <td>g01</td> <td>ping yoda</td> <td>success</td> </tr>
-<tr> <td>g01</td> <td>ssh yoda</td> <td>success</td> </tr>
-<tr> <td>g01</td> <td>curl http://yoda/foo</td> <td>Error 404 (this means we can talk to httpd, only a web server answers 404)</td> </tr>
-
-
-</table>
-
-<hr>
-<h2>Grading:</h2>
+<h2>Part D: Forward rules</h2>
 <p class="description">
-Run the <a href="./host_info_net.sh">host_info_net.sh</a> script on r01 and g01.
+The packets we proxy will pass through us like they were routed.  We want to let these packets through but no others.
 </p>
+
+<ol>
+<li>To control the filtering of packets passing through the router, we attach a chain to the <strong>forward</strong> hook.   <strong>Note:</strong>Packets passing through the router are not processed by chains attached to  the input or output hooks.  
+<br>This chain will only allow ICMP across the router.
+<pre class="code">
+chain forward {
+		type filter hook forward priority 0; policy drop;
+								
+		# required for stateful rules
+		ct state established,related accept
+
+		# allow http
+		tcp dport 80 ct state new accept
+
+
+		# accept all icmp packets (v4 and v6)
+		ip protocol icmp accept
+		ip6 nexthdr icmpv6 accept
+}
+</pre>
+</li>
+</ol>
+
+<hr>
+<h2>Part E: Configure NAT</h2>
+<p class="description">
+We will us Network Address Translation to automatically forward packets destined to 10.1.1.250:80 to 15.35.79.233:80 and to make sure the response packets can find their way back.
+</p>
+
+<ol>
+<li>Add a nat table to nftables.conf
+<pre class="code">
+table ip nat {
+	chain postrouting {
+		type nat hook postrouting priority srcnat; policy accept;
+
+		# make sure proxied packets can find their way home
+		#
+		oif "enp0s8"  tcp dport  80 log snat to 15.35.79.1
+	}
+
+	chain prerouting {
+		type nat hook prerouting priority dstnat; policy accept;
+
+		# re-address http packets to icm01
+		#
+		iif "enp0s3"  tcp dport 80 dnat to 15.35.79.233
+	}
+}
+</pre>
+</li>
+<li>Test our work from w01
+<pre class="code">
+curl http://10.1.1.250
+</pre>
+</li>
+</ol>
+
+<hr>
+<h2>Part F: Your turn...</h2>
+<p class="description">
+We have a working proxy but we should make it a bit more secure. 
+</p>
+
+<ol>
+<li>Back up our working nftables configuration file
+<pre class="code">
+tar cf ~/nftables_good.tar /etc/sysconfig/nftables.conf 
+</pre>
+</li>
+
+<li>Our current forward rules allow http in both directions.  We do not trust icm01 and do not want it to look at web pages on blue.  Modify our "# allow http" rule to implement this.
+</li>
+
+<li>As mentioned, we do not trust icm01.  We want to log all the packets we drop.  Accomplish this by adding one rule to each of the input and forward chains.
+</li>
+</ol>
+
+<hr>
+<h2>Part G: Grading</h2>
+<p class="description">
+Submit your nftables.conf to Canvas
+</p>
+</body>
+</html>
 
 </body>
 </html>
