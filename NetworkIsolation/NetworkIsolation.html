@@ -295,6 +295,13 @@ tar cf ~/nftables_good.tar /etc/sysconfig/nftables.conf
 <li>Our current forward rules allow http in both directions.  We do not trust icm01 and do not want it to look at web pages on blue.  Modify our "# allow http" rule to implement this.
 </li>
 
+<li>Tighten our icmp rules:
+<ul>
+<li>do not forward any icmp packets </li>
+<li>only accept icmp packets from blue </li>
+</ul>
+</li>
+
 <li>As mentioned, we do not trust icm01.  We want to log all the packets we drop.  Accomplish this by adding one rule to each of the input and forward chains.
 </li>
 </ol>
