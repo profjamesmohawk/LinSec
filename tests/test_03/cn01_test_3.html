@@ -1,0 +1,203 @@
+<html>
+<head>
+<style type="text/css">
+table { margin: 1em; border-collapse: collapse; }
+td, th { padding: .3em; border: 2px #ccc solid; }
+</style>
+</head>
+<body><table>
+<h2> COMP-10032 Host Info Report - Hands On Evaluation 3 </h2>
+<tr>
+<td valign="top"> Hostname </td>
+<td><pre>
+ 
+cn01
+ 
+</pre>
+</td>
+</tr>
+<tr>
+<td valign="top"> When was I built? </td>
+<td><pre>
+ 
+-rw-------. 1 root root 28942 Mar 10 07:13 /var/log/anaconda/anaconda.log
+ 
+</pre>
+</td>
+</tr>
+<tr>
+<td valign="top"> When is now? </td>
+<td><pre>
+ 
+Wed Mar 15 13:27:55 EDT 2023
+ 
+</pre>
+</td>
+</tr>
+<tr><td colspan="2"> Ansible </td></tr>
+<tr>
+<td valign="top"> Ansible ping db03 </td>
+<td><pre>
+
+
+db03 | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/libexec/platform-python"
+    },
+    "changed": false,
+    "ping": "pong"
+}
+ 
+</pre>
+</td>
+</tr>
+<tr>
+<td valign="top"> Run db_config.yml playbook </td>
+<td><pre>
+ 
+
+PLAY [Confi DB server] *********************************************************
+
+TASK [Gathering Facts] *********************************************************
+ok: [db03]
+
+TASK [Install the latest version of mariadb] ***********************************
+ok: [db03]
+
+TASK [permit traffic in default zone for mariadb] ******************************
+ok: [db03]
+
+TASK [permit traffic in default zone for ssh] **********************************
+ok: [db03]
+
+TASK [Enable service mariadb] **************************************************
+ok: [db03]
+
+TASK [start service mariadb] ***************************************************
+ok: [db03]
+
+PLAY RECAP *********************************************************************
+db03                       : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+
+ 
+</pre>
+</td>
+</tr>
+<tr>
+<td valign="top"> Playbook contents </td>
+<td><pre>
+ 
+---
+- name: Confi DB server
+  hosts: db03
+  remote_user: root
+
+  tasks:
+   - name: Install the latest version of mariadb
+     ansible.builtin.dnf:
+       name: mariadb-server
+       state: latest
+
+   - name: permit traffic in default zone for mariadb
+     ansible.posix.firewalld:
+       port: 3306/tcp
+       permanent: yes
+       immediate: yes
+       state: enabled
+
+# comment
+   - name: permit traffic in default zone for ssh
+     ansible.posix.firewalld:
+       port: 22/tcp
+       permanent: yes
+       immediate: yes
+       state: enabled
+
+   - name: Enable service mariadb
+     ansible.builtin.systemd:
+       name: mariadb.service
+       enabled: yes
+       masked: no
+
+   - name: start service mariadb
+     ansible.builtin.systemd:
+       name: mariadb.service
+       state: started
+ 
+</pre>
+</td>
+</tr>
+<tr><td colspan="2"> GIT </td></tr>
+<tr>
+<td valign="top"> GIT Repo created </td>
+<td><pre>
+ 
+db_config.yml
+ 
+</pre>
+</td>
+</tr>
+<tr>
+<td valign="top"> GIT Commits </td>
+<td><pre>
+ 
+commit 381d9941e80946acc0a7723525788963071eef5f
+Author: jay <j@example.com>
+Date:   Wed Mar 15 12:22:22 2023 -0400
+
+    added comment for test 3
+
+commit 91d18ca58e841a41d13ffc68a5f5fc8ed9af1889
+Author: jay <j@example.com>
+Date:   Wed Mar 15 12:21:14 2023 -0400
+
+    first commit
+ 
+</pre>
+</td>
+</tr>
+<tr><td colspan="2"> nftables </td></tr>
+<tr>
+<td valign="top"> Reload our config </td>
+<td><pre>
+ 
+reload success
+ 
+</pre>
+</td>
+</tr>
+<tr>
+<td valign="top"> cat /etc/sysconfig/nftables.conf </td>
+<td><pre>
+ 
+# in /etc/nftables for nftables service.
+
+#include "/etc/nftables/main.nft"
+
+# To customize, either edit the samples in /etc/nftables, append further
+# commands to the end of this file or overwrite it after first service
+# start by calling: 'nft list ruleset >/etc/sysconfig/nftables.conf'.
+
+
+table inet test3_inet_table {
+
+        chain input {
+                type filter hook input priority 0; policy drop
+
+		ct state established,related accept
+
+                # allow new tcp connections to port 22 (ssh)
+                tcp dport ssh ct state new accept
+
+                iif lo accept
+
+                # accept all icmp packets (v4 and v6)
+                ip protocol icmp accept
+                ip6 nexthdr icmpv6 accept
+        }
+}
+ 
+</pre>
+</td>
+</tr>
+</table></body></html>

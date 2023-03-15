@@ -1,0 +1,121 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd"> <html>
+<head>
+	<meta content="text/html; charset=ISO-8859-1" http-equiv="content-type">
+  	<link rel="stylesheet" href="../../jbl_labs.css"> 
+  	<title>
+		Hands-On Evaluation 3
+	</title>
+  
+</head>
+
+<body>
+<h1>Hands-On Evaluation 3</h1>
+<h2>Introduction</h2>
+<br>
+<p class="description">
+This evaluation must be completed in class
+</p>
+
+
+<h2>Grading:</h2>
+<ul>
+<li> Run the <a href="./HostInfo_03.sh">HostInfo_03.sh</a> script on cn01.  </li>
+<li>Submit the report for cnb01 to Canvas.</li>
+</ul>
+<h3>Grading Scheme</h3>
+<table>
+<tr><td>db01 built and patched</td><td align="right">1</td></tr>
+<tr><td>Ansible</td><td align="right">3</td></tr>
+<tr><td>GIT</td><td align="right">3</td></tr>
+<tr><td>nftables</td><td align="right">3</td></tr>
+<tr><td>Total</td><td align="right">10</td></tr>
+</table>
+
+<hr>
+<div style="page-break-before: always">
+<h2>Overview:</h2>
+<p class="description"> 
+Today you will use Ansible to configure a new database server.
+</p>
+<br/>
+
+
+<p> <IMG src="./HandsOn_03.png" alt=""> </p>
+<br>
+<hr>
+<div style="page-break-before: always"> 
+<h2>Part A: Deploy cn01 and db03</h2>
+</div>
+<ol>
+<li>you may use cn01 from the Ansible lab, or build a new cn01 </li>
+<li>you must build a new db03 for today's test </li>
+</ol>
+
+<hr>
+<h2>Part B: Configure Ansible</h2>
+<p class="description">
+Create a playbook  to install mariadb on db03
+</p>
+<ol>
+<li>your playbook file must be named <strong>/root/ansible/db_config.yml</strong></li>
+<li>use ansible.builtin.dnf to install mariadb-server </li>
+<li>use  ansible.builtin.systemd to start the mariadb service (now and automatically on boot) </li>
+<li>use ansible.builtin.firewalld to open 3306/tcp </li>
+<li>pay attention to task names when you copy and paste </li>
+
+</ol>
+
+<hr>
+<h2>Part C: GIT </h2>
+<p class="description">
+We will use GIT to track changes to our playbooks.
+</p>
+<ol>
+<li>Install GIT on cn01 </li>
+<li>Create an empty GIT repository in <strong>/root/ansible</strong> </li>
+<li>Add all our playbooks to out repo </li>
+<li>Commit our files with the commit message 'first commit' </li>
+<li>Edit db_config.yml and add the comment <strong># i just added a comment</strong> </li>
+<li>Commit your change with a commit message of 'added comment for test 3' </li>
+
+</ol>
+
+<hr>
+<h2>Part D: nftables</h2>
+<p class="description">
+Just for fun, and grades, we will switch from firewalld to nftables on cn01
+</p>
+<ol>
+<li>stop, disable, and mask the firewalld.service </li>
+<li>configure /etc/sysconfig/nftables.conf 
+<ul>
+<li>allow incoming ssh connections </li>
+<li>allow connections that were initiated on cn01 (i.e. use connection tracking) </li>
+<li>allow local traffic </li>
+<li>allow all ICMP packets </li>
+<li>place all rules in a single input chain residing in a table called <strong>test3_inet_table</strong>, here is an empty table to start with...
+<pre class="code">
+table inet test3_inet_table {
+
+        chain input {
+                type filter hook input priority 0; policy drop
+
+                # allow connections we know about
+
+                # allow new tcp connections to port 22 (ssh)
+
+                # allow local traffic
+
+                # accept all icmp packets (v4 and v6)
+        }
+}
+</pre>
+</li>
+<li>start, and enable the nftables.service
+</li>
+</ul>
+</li>
+</ol>
+
+</body>
+</html>
