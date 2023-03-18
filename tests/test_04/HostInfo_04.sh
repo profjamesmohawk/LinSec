@@ -1,8 +1,8 @@
 #!/bin/bash
 
-OUT_FILE=$(hostname)_report.html
+OUT_FILE=$(hostname)_t4_report.html
 
-# map stdout to <hostname>_report.html
+# map stdout to <hostname>_t4_report.html
 #
 rm $OUT_FILE
 exec 1<> $OUT_FILE
@@ -76,7 +76,7 @@ echo "Be patient, it could take a few minutes to run." >&2
 #
 spit_pre
 
-spit_title "COMP-10032 Host Info Report - Hands On Evaluation 3"
+spit_title "COMP-10032 Host Info Report - Hands On Evaluation 4"
 
 spit_start Hostname
 hostname
@@ -91,33 +91,33 @@ date
 spit_end
 
 
-spit_start "Was I patched?<br><em>7.61.1-18.el8 <br>from miniPatch</em>"
-yum list curl | grep curl
+spit_section_header "Part A: httpd"
+
+spit_start "systemctl settings"
+systemctl status httpd
 spit_end
 
-spit_start "Check Network, httpd, hostname, and hosts all at once"
-curl http://$(hostname)/ | wc -l
+spit_start "test with curl"
+curl http://localhost:8888
+spit_end
+
+spit_section_header "Part B: Kickstart"
+
+spit_start "Kickstart fragment encoded with base64 </br>(use based64 -d to read)"
+curl http://10.1.1.100/Kickstart/default.ks |grep amita| base64
+spit_end
+
+spit_section_header "Part C: YUM"
+
+spit_start "looking for cpio 2.12-10.el8 "
+yum list cpio
 spit_end
 
 
-
-spit_start "Bullwinkle's account"
-id bullwinkle
-
-echo ""
-grep bullwinkle /etc/shadow | base64
+spit_section_header "Appendix:"
+spit_start "Complete Kickstart file"
+curl http://10.1.1.100/Kickstart/default.ks | base64
 spit_end
 
-spit_start "SSH Keys"
-echo Alice:
-cat ~alice/.ssh/authorized_keys  | sed -e 's/.*==//'
-echo
-echo Rocky:
-cat ~rocky/.ssh/authorized_keys  | sed -e 's/.*==//'
-spit_end
-
-spit_start "trojan_c Analysis"
-cat /tmp/answers.txt
-spit_end
 
 spit_post

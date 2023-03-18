@@ -1,0 +1,76 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd"> <html>
+<head>
+	<meta content="text/html; charset=ISO-8859-1" http-equiv="content-type">
+  	<link rel="stylesheet" href="../../jbl_labs.css"> 
+  	<title>
+		Hands-On Evaluation 4
+	</title>
+  
+</head>
+
+<body>
+<h1>Hands-On Evaluation 4</h1>
+<h2>Introduction</h2>
+<br>
+<p class="description">
+This evaluation must be completed in class
+</p>
+
+
+<h2>Grading:</h2>
+<ul>
+<li> Run the <a href="./HostInfo_04.sh">HostInfo_04.sh</a> script on web04.  </li>
+<li>Submit the report Canvas.</li>
+</ul>
+<h3>Grading Scheme</h3>
+<table>
+<tr><td>web04 built and patched</td><td align="right">1</td></tr>
+<tr><td>httpd</td><td align="right">3</td></tr>
+<tr><td>Kickstart</td><td align="right">3</td></tr>
+<tr><td>yum repo changes</td><td align="right">3</td></tr>
+<tr><td>Total</td><td align="right">10</td></tr>
+</table>
+
+<hr>
+<h2>Diagram</h2>
+<p> <IMG src="./HandsOn_04.png" alt=""> </p>
+<hr>
+<h2>Part A: Install and configure httpd on web04</h2>
+<ol>
+<li>set httpd to start on boot</li>
+<li>create a simple default html page that contains: Welcome to web04</li>
+<li>configure httpd to listen on 8888 </li>
+		<ul>
+		<li>SELinux must remain in enforcing mode </li>
+		<li>8888/tcp must be allowed through the local firewall </li>
+		<li>use firewalld as the firewall </li>
+		</ul>
+<li>The grading script will run <span class=cmd>curl http://web04:8888</span>
+</li>
+
+
+</ol>
+
+<hr>
+<h2>Part B: Kickstart</h2>
+<p class="description">
+Modify default.ks on yoda so that every new system built contains an account for amita
+</p>
+<ol>
+<li>use the kickstart <strong>user</strong> command </li>
+<li>set amita's password to <strong>webpass</strong> </li>
+<li>amita's password must be hashed using the SHA512 algorythm </li>
+<li>use your 10 digit student number as the salt </li>
+</ol>
+
+<hr>
+<h2>Part C: YUM repo changes </h2>
+<ol>
+<li>add <a href="./cpio-2.12-10.el8.x86_64.rpm">cpio-2.12-10.el8.x86_64.rpm</a> to the miniPatch repo on yoda </li>
+<li>run <span class=cmd>yum clean all</span> on web04 to ensure that you get the latest repo data </li>
+<li>apply the patch to web04 </li>
+</ol>
+
+
+</body>
+</html>
