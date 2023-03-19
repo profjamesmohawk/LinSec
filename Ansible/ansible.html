@@ -191,8 +191,8 @@ ansible-playbook  web_config.yml
 <ul>
 <li>Select <strong>Download tarball</strong> </li>
 </ul>
-<li>Copy the tarball to root's home directory on ns01 </li>
-<li>Write a configuration playbook to install the posix module on ns01
+<li>Copy the tarball to root's home directory on cn01 </li>
+<li>Write a configuration playbook to install the posix module on cn01
 <pre class="code">
 cat &gt; ~/ansible/posix_requirements.yml &lt;&lt;EOF
 ---
@@ -228,7 +228,7 @@ ssh web01 firewall-cmd --list-all
 <hr>
 <h2>Part F: Check our work - access the web server</h2>
 <ul>
-<li>From ns01, use curl
+<li>From cn01, use curl
 <pre class="code">
 curl http://web01/
 </pre>
