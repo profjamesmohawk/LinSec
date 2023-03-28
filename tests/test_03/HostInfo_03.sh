@@ -1,6 +1,6 @@
 #!/bin/bash
 
-OUT_FILE=$(hostname)_report.html
+OUT_FILE=$(hostname)_test_3.html
 
 # map stdout to <hostname>_report.html
 #
@@ -90,34 +90,49 @@ spit_start "When is now?"
 date
 spit_end
 
+spit_section_header "Ansible"
 
-spit_start "Was I patched?<br><em>7.61.1-18.el8 <br>from miniPatch</em>"
-yum list curl | grep curl
+spit_start "Ansible ping db03"
+ansible -m ping db03
+spit_end
+spit_start "Run db_config.yml playbook"
+ansible-playbook /root/ansible/db_config.yml
 spit_end
 
-spit_start "Check Network, httpd, hostname, and hosts all at once"
-curl http://$(hostname)/ | wc -l
+spit_start "Playbook contents"
+cat /root/ansible/db_config.yml
+spit_end
+
+
+spit_section_header "GIT"
+
+spit_start "GIT Repo created"
+cd /root/ansible
+git ls-files db_config.yml
+spit_end
+
+spit_start "GIT Commits"
+cd /root/ansible
+git log
+spit_end
+
+spit_section_header "nftables"
+
+spit_start "Reload our config"
+if
+	systemctl reload nftables.service
+then
+	echo "reload success"
+else
+	echo "reload fail"
+fi
+spit_end
+
+spit_start "cat /etc/sysconfig/nftables.conf"
+cat /etc/sysconfig/nftables.conf
 spit_end
 
 
 
-spit_start "Bullwinkle's account"
-id bullwinkle
-
-echo ""
-grep bullwinkle /etc/shadow | base64
-spit_end
-
-spit_start "SSH Keys"
-echo Alice:
-cat ~alice/.ssh/authorized_keys  | sed -e 's/.*==//'
-echo
-echo Rocky:
-cat ~rocky/.ssh/authorized_keys  | sed -e 's/.*==//'
-spit_end
-
-spit_start "trojan_c Analysis"
-cat /tmp/answers.txt
-spit_end
 
 spit_post
