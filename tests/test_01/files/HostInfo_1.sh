@@ -1,0 +1,158 @@
+#!/bin/bash
+
+OUT_FILE=$(hostname)_report.html
+
+# map stdout to <hostname>_report.html
+#
+rm $OUT_FILE
+exec 1<> $OUT_FILE
+
+################ functions to spit html ################################
+#
+function spit_start {
+	echo "<tr>"
+	echo "<td valign=\"top\"> $1 </td>"
+	echo "<td><pre>"
+	echo " "
+
+	# tell the user what we are up to
+	echo "Collecting Info for $1" | sed -e 's/<.*>//g' >&2
+}
+
+function spit_end {
+	echo " "
+	echo "</pre>"
+	echo "</td>"
+	echo "</tr>"
+}
+
+function spit_pre {
+	echo "<html>"
+	echo "<head>"
+	echo "<style type=\"text/css\">"
+	echo "table { margin: 1em; border-collapse: collapse; }"
+	echo "td, th { padding: .3em; border: 2px #ccc solid; }"
+	echo "</style>"
+	echo "</head>"
+
+	echo "<body><table>"
+}
+
+function spit_post {
+	echo "</table></body></html>"
+}
+
+function spit_title {
+	echo "<h2> $1 </h2>"
+}
+
+function spit_section_header {
+	echo "<tr><td colspan=\"2\"> $1 </td></tr>"
+}
+#
+################# end html spitters ######################################
+
+#
+# are we root?
+#
+if (( EUID != 0 ))
+then
+	echo "You must be root to run this script" >&2
+	exit 1
+fi
+
+#
+# Tell the nice people what we are going to do
+#
+echo "This script will collect interesting data from your system" >&2
+echo "The results will be placed in $OUT_FILE, feel free to have a look." >&2
+echo "The best way to view it is a full browser, but lynx will do in a pinch." >&2
+
+
+#
+# from here it's a mix is spits and commands
+#
+#
+spit_pre
+
+spit_title "Test 01 Report"
+
+
+spit_section_header "Work must be done on test day."
+spit_start "When was I built?"
+ls -l /var/log/anaconda/anaconda.log
+spit_end
+
+spit_start "When is now?"
+date
+spit_end
+
+
+spit_section_header "Part A: Build and patch web01 (2 points)"
+
+spit_start "Hostname"
+hostname
+spit_end
+
+spit_start "IP Address configured with network manager"
+nmcli connection show enp0s3 | grep -e ipv4.method -e ipv4.addresses
+spit_end
+
+spit_start "Hosts file (web01, yoda)"
+grep -e web01 -e yoda /etc/hosts
+spit_end
+
+spit_section_header "Part B: Apache (2 points)"
+spit_start "Check for new home page"
+curl http://web01/ | grep -e Welcome -e web01
+spit_end
+
+spit_section_header "Part C: Kickstart file (3 points)"
+spit_start "looking for rocky"
+curl http://10.1.1.100/Kickstart/default.ks | grep 'user.*name.*rocky'
+spit_end
+
+spit_start "checking rocky's pw"
+
+for W in $( curl  http://10.1.1.100/Kickstart/default.ks | grep 'user.*name.*rocky' | sed 's/=/ /g' | head -1)
+do
+	if [[ $W =~ ^\$ ]]
+	then
+		PW=$W
+	fi
+done
+
+echo $PW | {
+	IFS='$'
+	while
+		read P0 C S D
+        do
+            newD=$(openssl passwd -$C -stdin -salt $S <<< donttellbjm)
+
+                #echo ".... \$${C}\$${S}\$${D}"
+                #echo ".... $newD"
+            if
+                [ "$newD" = "\$${C}\$${S}\$${D}" ]
+            then
+                echo "hash looks good"
+            else
+                echo "hash looks bad"
+            fi
+        done
+
+}
+	
+spit_end
+
+spit_section_header "Part D: bash added to miniPatch(3 points)"
+spit_start "check bask version, and install status<br><em>4.4.19-14.el8</em>"
+yum list bash
+spit_end
+
+
+spit_section_header "Complete Kickstart (for reference only)"
+spit_start "default.ks base64 encoded"
+curl http://10.1.1.100/Kickstart/default.ks | base64
+spit_end
+
+spit_post

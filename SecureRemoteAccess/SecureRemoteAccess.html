@@ -97,7 +97,7 @@ cd /var/lib/tftpboot/pxelinux.cfg
 # a pxe config file for lab_03
 cp default lab_03
 
-# point earth to the correct config, note: 0A0101D2 is 10.1.1.210 in hex, try gethostip 10.1.1.210
+# point earth to the correct config, note: 0A0101D2 is 10.1.1.210 in hex, try gethostip 10.1.1.210 (the gethostip command is in the syslinux package)
 ln -s lab_03 0A0101D2
 
 # point wind to the correct config
